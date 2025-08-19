@@ -298,7 +298,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:440722706817:android:45dcd3fb12b8666dea9880",
         "android_client_info": {
-          "package_name": "com.akupay.androidapps"
+          "package_name": "com.akupay.mobileapp"
         }
       },
       "oauth_client": [
@@ -334,7 +334,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:440722706817:android:4372e75f2058a575ea9880",
         "android_client_info": {
-          "package_name": "com.akupay.androidmobileapps"
+          "package_name": "com.akupay.mobileapp"
         }
       },
       "oauth_client": [
@@ -370,7 +370,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:440722706817:android:44b10dd15a9a138aea9880",
         "android_client_info": {
-          "package_name": "com.akupaymobile.android"
+          "package_name": "com.akupay.mobileapp"
         }
       },
       "oauth_client": [

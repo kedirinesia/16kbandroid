@@ -310,16 +310,6 @@ class _RegisterUserState extends State<RegisterUser> {
     }
 
     try {
-      // Debug: Print request details
-      print('=== SUBMIT REGISTRATION DEBUG ===');
-      print('URL: $apiUrl/user/register');
-      print('Headers: ${json.encode({
-        'content-type': 'application/json',
-        'merchantCode': sigVendor
-      })}');
-      print('Request Body: ${json.encode(dataToSend)}');
-      print('===============================');
-      
       http.Response response = await http.post(
         Uri.parse('$apiUrl/user/register'),
         headers: {
@@ -328,23 +318,9 @@ class _RegisterUserState extends State<RegisterUser> {
         },
         body: json.encode(dataToSend),
       );
-      
-      // Debug: Print response details
-      print('=== RESPONSE DEBUG ===');
-      print('Status Code: ${response.statusCode}');
-      print('Response Headers: ${response.headers}');
-      print('Response Body: ${response.body}');
-      print('Response Body Length: ${response.body.length}');
-      print('=====================');
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
         String message = data['message'];
-        
-        // Debug: Print success response data
-        print('=== SUCCESS RESPONSE DEBUG ===');
-        print('Parsed Data: ${json.encode(data)}');
-        print('Message: $message');
-        print('============================');
         
         // Navigate to link verification page after successful registration
         Navigator.of(context).pushAndRemoveUntil(
@@ -354,20 +330,6 @@ class _RegisterUserState extends State<RegisterUser> {
           (route) => false,
         );
       } else {
-        // Debug: Print error response data
-        print('=== ERROR RESPONSE DEBUG ===');
-        print('Error Status Code: ${response.statusCode}');
-        try {
-          var errorData = json.decode(response.body);
-          print('Error Data: ${json.encode(errorData)}');
-          String message = errorData['message'];
-          print('Error Message: $message');
-        } catch (parseError) {
-          print('Failed to parse error response: $parseError');
-          print('Raw error body: ${response.body}');
-        }
-        print('===========================');
-        
         String message = json.decode(response.body)['message'];
         showDialog(
           context: context,
@@ -392,13 +354,6 @@ class _RegisterUserState extends State<RegisterUser> {
         );
       }
     } catch (e) {
-      // Debug: Print exception details
-      print('=== EXCEPTION DEBUG ===');
-      print('Exception Type: ${e.runtimeType}');
-      print('Exception Message: ${e.toString()}');
-      print('Exception Stack Trace: ${e is Error ? e.stackTrace : 'No stack trace available'}');
-      print('======================');
-      
       showDialog(
         context: context,
         builder: (_) {
@@ -421,11 +376,6 @@ class _RegisterUserState extends State<RegisterUser> {
         },
       );
     } finally {
-      // Debug: Print completion status
-      print('=== REGISTRATION COMPLETED ===');
-      print('Loading state set to false');
-      print('=============================');
-      
       setState(() {
         loading = false;
       });

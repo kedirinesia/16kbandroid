@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// // import 'package:installed_apps/installed_apps.dart'; // Remove this import // Remove this import
 import 'package:mobile/Products/alpay/layout/components/template.dart';
 import 'package:mobile/bloc/Bloc.dart';
 import 'package:mobile/models/deposit.dart';
@@ -16,7 +15,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share/share.dart';
 import 'package:path_provider/path_provider.dart';
-import \'package:url_launcher/url_launcher.dart\';
+import 'package:url_launcher/url_launcher.dart';
 
 class DetailDeposit extends StatefulWidget {
   final DepositModel dep;
@@ -41,15 +40,10 @@ class _DetailDepositState extends State<DetailDeposit> {
   }
 
   void checkingDanaApp() async {
-    InstalledApps.getAppInfo('id.dana').then((app) {
-      print(app);
-      setState(() {
-        danaApp = true;
-      });
-    }).catchError((e) {
-      setState(() {
-        danaApp = false;
-      });
+    // For now, set danaApp to false since we can't check installed apps
+    // This can be implemented later with proper package or alternative method
+    setState(() {
+      danaApp = false;
     });
   }
 

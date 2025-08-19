@@ -1,11 +1,14 @@
-  import 'package:cached_network_image/cached_network_image.dart';
+  import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:http/http.dart' as http;
 import 'package:mobile/Products/payuniovo/layout/privacy_policy.dart';
 import 'package:mobile/bloc/ConfigApp.dart';
 import 'package:mobile/modules.dart';
 import 'package:mobile/provider/api.dart';
+import 'package:mobile/Products/payuniovo/config.dart' as payuniovoConfig;
 import 'package:mobile/Products/payuniovo/layout/forgot-password/step_1.dart';
 import 'package:mobile/Products/payuniovo/layout/otp.dart';
 import 'package:nav/nav.dart';
@@ -36,6 +39,12 @@ class _LoginPageState extends State<LoginPage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String phone = prefs.getString('phone') ?? '';
     String pin = prefs.getString('pin') ?? '';
+    
+    print('=== PAYUNIOVO LOAD CREDENTIALS ===');
+    print('Saved phone: $phone');
+    print('Saved PIN: $pin');
+    print('==================================');
+    
     setState(() {
       _phone.text = phone;
       _password.text = pin;
@@ -59,34 +68,161 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       String phoneNumber = _phone.text.trim();
-      if (!phoneNumber.startsWith('0')) {
-        phoneNumber = '0$phoneNumber';
-      }
+      
+      print('=== PAYUNIOVO LOGIN DEBUG ===');
+      print('Phone number: $phoneNumber');
+      print('PIN: ${_password.text.trim()}');
+      print('API URL: ${payuniovoConfig.apiUrl}/user/login');
+      print('Merchant Code: ${payuniovoConfig.sigVendor}');
+      print('Remember Me: $rememberMe');
+      print('Timestamp: ${DateTime.now()}');
+      print('================================');
 
-      Map<String, dynamic> response = await api.post(
-        '/user/login',
-        auth: false,
-        data: {
-          'phone': phoneNumber,
-          'pin': _password.text.trim(),
-        },
+      // Gunakan config PayUniOvo untuk API call
+      Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'merchantCode': payuniovoConfig.sigVendor,
+      };
+      
+      Map<String, dynamic> requestBody = {
+        'phone': phoneNumber,
+        'pin': _password.text.trim(),
+      };
+      
+      print('=== PAYUNIOVO REQUEST DETAILS ===');
+      print('Headers: $headers');
+      print('Request Body: $requestBody');
+      print('==================================');
+      
+      http.Response response = await http.post(
+        Uri.parse('${payuniovoConfig.apiUrl}/user/login'),
+        headers: headers,
+        body: json.encode(requestBody),
       );
 
-      Map<String, dynamic> data = response['data'];
+      print('=== PAYUNIOVO API RESPONSE ===');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('===============================');
+      
+      if (response.statusCode == 200) {
+        Map<String, dynamic> responseData = json.decode(response.body);
+        Map<String, dynamic> data = responseData['data'];
+        
+        print('=== PAYUNIOVO SUCCESS ===');
+        print('Response Data: $data');
+        print('Phone from API: ${data['phone']}');
+        print('Validate ID: ${data['validate_id']}');
+        print('========================');
+        
+                  // Save phone and PIN if rememberMe is true, else remove it.
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          if (rememberMe) {
+            await prefs.setString('phone', phoneNumber);
+            await prefs.setString('pin', _password.text.trim());
+            print('=== PAYUNIOVO SAVE CREDENTIALS ===');
+            print('Saved phone: $phoneNumber');
+            print('Saved PIN: ${_password.text.trim()}');
+            print('==================================');
+          } else {
+            await prefs.remove('phone');
+            await prefs.remove('pin');
+            print('=== PAYUNIOVO REMOVE CREDENTIALS ===');
+            print('Credentials removed');
+            print('====================================');
+          }
 
-      // Save phone and PIN if rememberMe is true, else remove it.
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      if (rememberMe) {
-        await prefs.setString('phone', phoneNumber);
-        await prefs.setString('pin', _password.text.trim());
+        Nav.pushReplacement(OtpPage(data['phone'], data['validate_id']));
       } else {
-        await prefs.remove('phone');
-        await prefs.remove('pin');
+        // Handle error response
+        Map<String, dynamic> errorData = json.decode(response.body);
+        
+        print('=== PAYUNIOVO ERROR ===');
+        print('Error Status: ${errorData['status']}');
+        print('Error Message: ${errorData['message']}');
+        print('=======================');
+        
+        // Tampilkan pesan error yang informatif ke user
+        String errorMessage = errorData['message'] ?? 'Terjadi kesalahan';
+        
+        // Pesan khusus untuk "nomor tidak ditemukan"
+        String customMessage = '';
+        if (errorMessage.toLowerCase().contains('tidak ditemukan') || 
+            errorMessage.toLowerCase().contains('not found')) {
+          customMessage = 'Nomor telepon yang Anda masukkan tidak terdaftar dalam sistem. Silakan periksa kembali nomor Anda atau daftar akun baru.';
+        } else {
+          customMessage = errorMessage;
+        }
+        
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Login Gagal'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(customMessage),
+                  SizedBox(height: 16),
+                  Text(
+                    'Kemungkinan penyebab:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text('• Nomor telepon belum terdaftar'),
+                  Text('• Format nomor tidak sesuai'),
+                  Text('• PIN yang dimasukkan salah'),
+                  Text('• Akun belum aktif'),
+                  SizedBox(height: 16),
+                  Text(
+                    'Tips:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 8),
+                  Text('• Pastikan nomor sudah terdaftar'),
+                  Text('• Gunakan format: 08xxxxxxxxxx'),
+                  Text('• Periksa kembali PIN Anda'),
+                  Text('• Hubungi customer service jika perlu'),
+                ],
+              ),
+              actions: [
+                if (errorMessage.toLowerCase().contains('tidak ditemukan') || 
+                    errorMessage.toLowerCase().contains('not found'))
+                  TextButton(
+                    child: Text('Daftar Akun'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // Navigate to register page
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => PrivacyPolicyPage(),
+                        ),
+                      );
+                    },
+                  ),
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+        
+        throw errorData;
       }
-
-      Nav.pushReplacement(OtpPage(data['phone'], data['validate_id']));
     } catch (e) {
-      String msg = (e as Map<String, dynamic>?)?['message'] ?? e.toString();
+      String msg;
+      if (e is Map<String, dynamic>) {
+        msg = e['message'] ?? 'Terjadi kesalahan';
+      } else if (e is FormatException) {
+        msg = e.message;
+      } else {
+        msg = e.toString();
+      }
       showToast(context, msg);
     } finally {
       if (mounted) {
@@ -197,46 +333,7 @@ class _LoginPageState extends State<LoginPage> {
                                     String str = value ?? '';
 
                                     if (str.length == 0) {
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            title: Text('Error'),
-                                            content: Text(
-                                                'Nomor handphone harus diisi'),
-                                            actions: [
-                                              TextButton(
-                                                child: Text('OK'),
-                                                onPressed: () {
-                                                  Navigator.of(context).pop();
-                                                },
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                      return null;
-                                    }
-                                    if (str.length < 8) {
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            title: Text('Error'),
-                                            content: Text(
-                                                'Nomor handphone minimal 9 digit'),
-                                            actions: [
-                                              TextButton(
-                                                child: Text('OK'),
-                                                onPressed: () {
-                                                  Navigator.of(context).pop();
-                                                },
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                      return null;
+                                      return 'Nomor handphone harus diisi';
                                     }
                                     return null;
                                   },
@@ -287,51 +384,9 @@ class _LoginPageState extends State<LoginPage> {
                                       )),
                                   validator: (value) {
                                     String str = value ?? '';
-                                    int count = configAppBloc
-                                            .pinCount.valueWrapper?.value ??
-                                        4;
 
                                     if (str.length == 0) {
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            title: Text('Error'),
-                                            content:
-                                                Text('PIN tidak boleh kosong.'),
-                                            actions: [
-                                              TextButton(
-                                                child: Text('OK'),
-                                                onPressed: () {
-                                                  Navigator.of(context).pop();
-                                                },
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                      return null;
-                                    }
-                                    if (str.length < count) {
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          return AlertDialog(
-                                            title: Text('Error'),
-                                            content: Text(
-                                                'PIN harus $count karakter'),
-                                            actions: [
-                                              TextButton(
-                                                child: Text('OK'),
-                                                onPressed: () {
-                                                  Navigator.of(context).pop();
-                                                },
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                      return null;
+                                      return 'PIN tidak boleh kosong';
                                     }
                                     return null;
                                   },

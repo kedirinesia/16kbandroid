@@ -168,6 +168,9 @@ class Api {
       if (e is FormatException) {
         rethrow;
       }
+      if (e is Map<String, dynamic>) {
+        rethrow; // Re-throw JSON error responses
+      }
       print('DEBUG: Network error: $e');
       throw FormatException('Network error: $e');
     }

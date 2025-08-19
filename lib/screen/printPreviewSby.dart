@@ -243,191 +243,224 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
   }
 
   Uint8List v1(PaperSize paperSize, CapabilityProfile profile) {
-    Generator ticket = Generator(paperSize, profile);
-    List<int> bytes = [];
-    ticket.setGlobalFont(PosFontType.fontA);
-    int i = bloc.printerFontSize.valueWrapper.value - 1;
-    List<PosTextSize> sizes = [
-      PosTextSize.size1,
-      PosTextSize.size2,
-      PosTextSize.size3,
-      PosTextSize.size4,
-      PosTextSize.size5,
-      PosTextSize.size6,
-      PosTextSize.size7,
-      PosTextSize.size8,
-    ];
+    try {
+      Generator ticket = Generator(paperSize, profile);
+      List<int> bytes = [];
+      ticket.setGlobalFont(PosFontType.fontA);
+      int i = bloc.printerFontSize.valueWrapper.value - 1;
+      List<PosTextSize> sizes = [
+        PosTextSize.size1,
+        PosTextSize.size2,
+        PosTextSize.size3,
+        PosTextSize.size4,
+        PosTextSize.size5,
+        PosTextSize.size6,
+        PosTextSize.size7,
+        PosTextSize.size8,
+      ];
 
-    bytes += ticket.emptyLines(1);
-    // Print store name first
-    bytes += ticket.text(
-      bloc.user.valueWrapper.value.namaToko.isEmpty
+      bytes += ticket.emptyLines(1);
+      
+      // Validate user data
+      if (bloc.user.valueWrapper.value == null) {
+        throw Exception('Data user tidak valid');
+      }
+      
+      // Print store name first
+      String storeName = bloc.user.valueWrapper.value.namaToko.isEmpty
           ? bloc.user.valueWrapper.value.nama
-          : bloc.user.valueWrapper.value.namaToko,
-      styles: PosStyles(
-        width: sizes[i + 1],
-        height: sizes[i + 1],
-        bold: true,
-        align: PosAlign.center,
-      ),
-    );
-    bytes += ticket.text(
-      bloc.user.valueWrapper.value.alamatToko.isEmpty
-          ? bloc.user.valueWrapper.value.alamat
-          : bloc.user.valueWrapper.value.alamatToko,
-      styles: PosStyles(
-        align: PosAlign.center,
-        width: sizes[i],
-        height: sizes[i],
-      ),
-    );
-    // Print custom header text
-    bytes += ticket.text(
-      customHeaderText,
-      styles: PosStyles(
-        width: sizes[i],
-        height: sizes[i],
-        align: PosAlign.center,
-      ),
-      linesAfter: 1,
-    );
-    bytes += ticket.text(
-      formatDate(trxData.created_at, 'dd MMMM yyyy HH:mm:ss'),
-      styles: PosStyles(
-        width: sizes[i],
-        height: sizes[i],
-      ),
-    );
-    bytes += ticket.text(
-      'TrxID: ${trxData.id.toUpperCase()}',
-      styles: PosStyles(
-        width: sizes[i],
-        height: sizes[i],
-      ),
-    );
-    bytes += ticket.hr();
-    bytes += ticket.text(
-      'Transaksi:',
-      styles: PosStyles(
-        underline: true,
-        width: sizes[i],
-        height: sizes[i],
-      ),
-    );
-    bytes += printLine(ticket, [
-      // {
-      //   'label': 'Nama Produk',
-      //   'value': trxData.produk['nama'],
-      // },
-      {
-        'label': 'Tujuan',
-        'value': trxData.tujuan,
-      },
-    ]);
-    trxData.print.forEach((el) {
-      if (!['token', 'jumlah', 'nominal', 'tagihan', 'admin']
-          .contains(el['label'].toString().toLowerCase())) {
-        bytes += printLine(ticket, [
-          {
-            'label': el['label'],
-            'value': _formatValue(el['value'], label: el['label']),
-          },
-        ]);
+          : bloc.user.valueWrapper.value.namaToko;
+      
+      if (storeName.isEmpty) {
+        storeName = 'Toko';
       }
-    });
-    if (showSN) {
-      if (trxData.print.isEmpty) {
-        bytes += printLine(ticket, [
-          {
-            'label': 'SN',
-            'value': trxData.sn,
-          },
-        ]);
-      }
-    } else {
-      bytes += ticket.hr();
-      trxData.print.forEach((el) {
-        if (el['label'].toString().toLowerCase() == 'token') {
-          bytes += ticket.text(
-            el['value'].toString(),
-            styles: PosStyles(
-              bold: true,
-              align: PosAlign.center,
-              width: sizes[i + 1],
-              height: sizes[i + 1],
-            ),
-          );
-        }
-      });
-    }
-    bytes += ticket.hr();
-    if (showDefaultTagihan) {
-      bytes += printLine(ticket, [
-        {
-          'label': 'Tagihan',
-          'value': formatRupiah(harga),
-        },
-      ]);
-    }
-    if (showDefaultAdmin) {
-      bytes += printLine(ticket, [
-        {
-          'label': 'Admin',
-          'value': formatRupiah(admin),
-        },
-      ]);
-    }
-    if (packageName == 'com.funmo.id') {
-      bytes += printLine(ticket, [
-        {
-          'label': 'Biaya Cetak',
-          'value': formatRupiah(cetak),
-        },
-      ]);
-    }
-    bytes += printLine(
-      ticket,
-      [
-        {
-          'label': 'Total',
-          'value': formatRupiah(total),
-        }
-      ],
-      bold: true,
-    );
-    bytes += ticket.hr(linesAfter: 1);
-    bytes += ticket.text(
-      'STRUK INI MERUPAKAN BUKTI PEMBAYARAN YANG SAH',
-      styles: PosStyles(
-        align: PosAlign.center,
-        width: sizes[i],
-        height: sizes[i],
-      ),
-      linesAfter: 1,
-    );
-    bytes += ticket.text(
-      footerStruk,
-      styles: PosStyles(
-        align: PosAlign.center,
-        width: sizes[i],
-        height: sizes[i],
-      ),
-      linesAfter: 1,
-    );
-    // Print custom footer text if available
-    if (customFooterText.isNotEmpty) {
+      
       bytes += ticket.text(
-        customFooterText,
+        storeName,
+        styles: PosStyles(
+          width: sizes[i + 1],
+          height: sizes[i + 1],
+          bold: true,
+          align: PosAlign.center,
+        ),
+      );
+      
+      String storeAddress = bloc.user.valueWrapper.value.alamatToko.isEmpty
+          ? bloc.user.valueWrapper.value.alamat
+          : bloc.user.valueWrapper.value.alamatToko;
+      
+      if (storeAddress.isNotEmpty) {
+        bytes += ticket.text(
+          storeAddress,
+          styles: PosStyles(
+            align: PosAlign.center,
+            width: sizes[i],
+            height: sizes[i],
+          ),
+        );
+      }
+      
+      // Print custom header text
+      if (customHeaderText.isNotEmpty) {
+        bytes += ticket.text(
+          customHeaderText,
+          styles: PosStyles(
+            width: sizes[i],
+            height: sizes[i],
+            align: PosAlign.center,
+          ),
+          linesAfter: 1,
+        );
+      }
+      
+      // Validate transaction data
+      if (trxData == null) {
+        throw Exception('Data transaksi tidak valid');
+      }
+      
+      bytes += ticket.text(
+        formatDate(trxData.created_at, 'dd MMMM yyyy HH:mm:ss'),
+        styles: PosStyles(
+          width: sizes[i],
+          height: sizes[i],
+        ),
+      );
+      bytes += ticket.text(
+        'TrxID: ${trxData.id.toUpperCase()}',
+        styles: PosStyles(
+          width: sizes[i],
+          height: sizes[i],
+        ),
+      );
+      bytes += ticket.hr();
+      bytes += ticket.text(
+        'Transaksi:',
+        styles: PosStyles(
+          underline: true,
+          width: sizes[i],
+          height: sizes[i],
+        ),
+      );
+      bytes += printLine(ticket, [
+        {
+          'label': 'Tujuan',
+          'value': trxData.tujuan ?? 'Tidak ada tujuan',
+        },
+      ]);
+      
+      if (trxData.print != null && trxData.print.isNotEmpty) {
+        trxData.print.forEach((el) {
+          if (!['token', 'jumlah', 'nominal', 'tagihan', 'admin']
+              .contains(el['label'].toString().toLowerCase())) {
+            bytes += printLine(ticket, [
+              {
+                'label': el['label'] ?? 'Label',
+                'value': _formatValue(el['value'], label: el['label']),
+              },
+            ]);
+          }
+        });
+      }
+      
+      if (showSN) {
+        if (trxData.print == null || trxData.print.isEmpty) {
+          bytes += printLine(ticket, [
+            {
+              'label': 'SN',
+              'value': trxData.sn ?? 'Tidak ada SN',
+            },
+          ]);
+        }
+      } else {
+        bytes += ticket.hr();
+        if (trxData.print != null) {
+          trxData.print.forEach((el) {
+            if (el['label'].toString().toLowerCase() == 'token') {
+              bytes += ticket.text(
+                el['value'].toString(),
+                styles: PosStyles(
+                  bold: true,
+                  align: PosAlign.center,
+                  width: sizes[i + 1],
+                  height: sizes[i + 1],
+                ),
+              );
+            }
+          });
+        }
+      }
+      bytes += ticket.hr();
+      if (showDefaultTagihan) {
+        bytes += printLine(ticket, [
+          {
+            'label': 'Tagihan',
+            'value': formatRupiah(harga),
+          },
+        ]);
+      }
+      if (showDefaultAdmin) {
+        bytes += printLine(ticket, [
+          {
+            'label': 'Admin',
+            'value': formatRupiah(admin),
+          },
+        ]);
+      }
+      if (packageName == 'com.funmo.id') {
+        bytes += printLine(ticket, [
+          {
+            'label': 'Biaya Cetak',
+            'value': formatRupiah(cetak),
+          },
+        ]);
+      }
+      bytes += printLine(
+        ticket,
+        [
+          {
+            'label': 'Total',
+            'value': formatRupiah(total),
+          }
+        ],
+        bold: true,
+      );
+      bytes += ticket.hr(linesAfter: 1);
+      bytes += ticket.text(
+        'STRUK INI MERUPAKAN BUKTI PEMBAYARAN YANG SAH',
         styles: PosStyles(
           align: PosAlign.center,
           width: sizes[i],
           height: sizes[i],
         ),
-        linesAfter: 3,
+        linesAfter: 1,
       );
-    }
+      bytes += ticket.text(
+        footerStruk,
+        styles: PosStyles(
+          align: PosAlign.center,
+          width: sizes[i],
+          height: sizes[i],
+        ),
+        linesAfter: 1,
+      );
+      // Print custom footer text if available
+      if (customFooterText.isNotEmpty) {
+        bytes += ticket.text(
+          customFooterText,
+          styles: PosStyles(
+            align: PosAlign.center,
+            width: sizes[i],
+            height: sizes[i],
+          ),
+          linesAfter: 3,
+        );
+      }
 
-    return Uint8List.fromList(bytes);
+      return Uint8List.fromList(bytes);
+    } catch (e) {
+      print('Error in v1 function: $e');
+      throw Exception('Error membuat data struk: $e');
+    }
   }
 
   Future<void> v2() async {
@@ -587,18 +620,35 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
   // }
 
   Future<void> startPrint() async {
-    bool status = await checkBluetooth();
-    if (!status) return;
-
-    BluetoothDevice device = await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => SelectPrinterPage()));
-    if (device == null) return;
-
-    if (await _bluetooth.isConnected) await _bluetooth.disconnect();
-    await _bluetooth.connect(device);
-    final _profile = await CapabilityProfile.load();
-
     try {
+      bool status = await checkBluetooth();
+      if (!status) return;
+
+      BluetoothDevice device = await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => SelectPrinterPage()));
+      if (device == null) return;
+
+      if (await _bluetooth.isConnected) await _bluetooth.disconnect();
+      
+      // Test connection
+      bool connected = await _bluetooth.connect(device);
+      if (!connected) {
+        showToast(context, 'Gagal terhubung ke printer');
+        return;
+      }
+      
+      final _profile = await CapabilityProfile.load();
+      if (_profile == null) {
+        showToast(context, 'Gagal memuat profile printer');
+        return;
+      }
+
+      // Validate transaction data
+      if (trxData == null) {
+        showToast(context, 'Data transaksi tidak valid');
+        return;
+      }
+
       switch (bloc.printerType.valueWrapper.value) {
         case 1:
           Uint8List bytes = v1(PaperSize.mm58, _profile);
@@ -633,10 +683,23 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
           await _bluetooth.writeBytes(v1(PaperSize.mm58, _profile));
       }
       showToast(context, 'Berhasil mencetak struk');
-    } catch (_) {
-      showToast(context, 'Gagal mencetak struk');
+    } catch (e) {
+      print('Print Error: $e');
+      if (e.toString().contains('Bluetooth')) {
+        showToast(context, 'Error koneksi Bluetooth: ${e.toString()}');
+      } else if (e.toString().contains('data')) {
+        showToast(context, 'Error data transaksi: ${e.toString()}');
+      } else if (e.toString().contains('profile')) {
+        showToast(context, 'Error profile printer: ${e.toString()}');
+      } else {
+        showToast(context, 'Gagal mencetak struk: ${e.toString()}');
+      }
     } finally {
-      await _bluetooth.disconnect();
+      try {
+        await _bluetooth.disconnect();
+      } catch (e) {
+        print('Error disconnecting: $e');
+      }
     }
   }
 
@@ -848,8 +911,7 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
                       ]),
                 ),
           SizedBox(height: showEditor ? 15 : 0),
-          Flexible(
-            flex: 1,
+          Expanded(
             child: ListView(
               children: <Widget>[
                 Screenshot(

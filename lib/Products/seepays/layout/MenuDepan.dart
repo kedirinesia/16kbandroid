@@ -445,7 +445,7 @@ class _MenuDepanState extends State<MenuDepan> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 16.0),
+          //SizedBox(height: 13.0),
           GridView.builder(
             shrinkWrap: true,
             primary: false,
@@ -460,8 +460,8 @@ class _MenuDepanState extends State<MenuDepan> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                                               Container(
-                          width: 70,
-                          height: 70,
+                          width: 55,
+                          height: 55,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
@@ -476,12 +476,12 @@ class _MenuDepanState extends State<MenuDepan> {
                           alignment: Alignment.center,
                           child: CachedNetworkImage(
                             imageUrl: menu.icon,
-                            width: 45,
-                            height: 45,
+                            width: 35,
+                            height: 35,
                             fit: BoxFit.contain,
                           ),
                         ),
-                        SizedBox(height: 12.0),
+                        SizedBox(height: 8.0),
                         Flexible(
                           child: Text(
                             menu.name,
@@ -501,7 +501,7 @@ class _MenuDepanState extends State<MenuDepan> {
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 2,
-                childAspectRatio: 0.95,
+                childAspectRatio: 0.85,
                 mainAxisSpacing: 4.0),
           ),
         ],

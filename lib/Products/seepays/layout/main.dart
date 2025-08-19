@@ -7,7 +7,7 @@ import 'package:mobile/Products/seepays/layout/home2.dart';
 import 'package:mobile/Products/seepays/layout/profile.dart';
 import 'package:mobile/bloc/ConfigApp.dart';
 import 'package:mobile/component/webview.dart';
-import 'package:mobile/screen/profile/my_qris.dart';
+import 'package:mobile/Products/lariz/layout/qris/qris_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mobile/screen/profile/cs/cs.dart';
 
@@ -50,10 +50,10 @@ class _MainAppState extends State<MainApp> {
             height: 40.0,
           ),
           elevation: 0.0,
-          onPressed: () {
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => MyQrisPage()));
-          },
+                      onPressed: () {
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => QrisPage(initIndex: 1)));
+            },
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,

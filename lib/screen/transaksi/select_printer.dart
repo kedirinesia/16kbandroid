@@ -14,6 +14,7 @@ class SelectPrinterPage extends StatefulWidget {
 
 class _SelectPrinterPageState extends State<SelectPrinterPage> {
   BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
+  
   @override
   void initState() {
     super.initState();
@@ -21,6 +22,21 @@ class _SelectPrinterPageState extends State<SelectPrinterPage> {
       'userId': bloc.userId.valueWrapper?.value,
       'title': 'Pilih Printer',
     });
+  }
+  
+  Future<List<BluetoothDevice>> _getBondedDevices() async {
+    try {
+      print("Getting bonded devices...");
+      List<BluetoothDevice> devices = await bluetooth.getBondedDevices();
+      print("Found ${devices.length} bonded devices");
+      for (var device in devices) {
+        print("Device: ${device.name} (${device.address})");
+      }
+      return devices;
+    } catch (e) {
+      print("Error getting bonded devices: $e");
+      throw e;
+    }
   }
 
   @override
@@ -35,8 +51,46 @@ class _SelectPrinterPageState extends State<SelectPrinterPage> {
             : Theme.of(context).primaryColor,
       ),
       body: FutureBuilder<List<BluetoothDevice>>(
-        future: bluetooth.getBondedDevices(),
+        future: _getBondedDevices(),
         builder: (ctx, snapshot) {
+          if (snapshot.hasError) {
+            return Container(
+              width: double.infinity,
+              height: double.infinity,
+              padding: EdgeInsets.all(20),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Error: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.red,
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          // Trigger rebuild
+                        });
+                      },
+                      child: Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          
           if (!snapshot.hasData) {
             return Container(
               width: double.infinity,
@@ -56,17 +110,45 @@ class _SelectPrinterPageState extends State<SelectPrinterPage> {
             return Container(
               width: double.infinity,
               height: double.infinity,
-              padding: EdgeInsets.all(10),
+              padding: EdgeInsets.all(20),
               child: Center(
-                child: Text(
-                  'Tidak ditemukan perangkat apapun'.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: packageName == 'com.lariz.mobile'
-                        ? Theme.of(context).secondaryHeaderColor
-                        : Theme.of(context).primaryColor,
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.bluetooth_disabled,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Tidak ditemukan perangkat printer',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Pastikan printer sudah dipasangkan (paired) dengan perangkat ini melalui pengaturan Bluetooth',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          // Trigger rebuild
+                        });
+                      },
+                      child: Text('Refresh'),
+                    ),
+                  ],
                 ),
               ),
             );

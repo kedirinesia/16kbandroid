@@ -872,7 +872,7 @@ android {
         }
         akupay {
             dimension "flavor-type"
-            applicationId "com.akupay.androidmobileapps"
+            applicationId "com.akupay.mobileapp"
             versionCode 16
             versionName "2.3.1"
             signingConfig signingConfigs.akupay

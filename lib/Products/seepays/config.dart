@@ -3,7 +3,7 @@
 
 import 'layout/main.dart';
 
-String sigVendor = '685a32de5fb4c98ea80e8734';
+String sigVendor = '685a32de5fb4c98ea80e8734';  
 
 const namaApp = 'SEEPAYS BILLER';
 const labelSaldo = 'Saldo';

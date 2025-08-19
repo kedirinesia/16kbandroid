@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:io' show Platform;
 
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -23,6 +24,8 @@ import 'package:mobile/screen/transaksi/select_printer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
+import 'test_bluetooth_ios.dart';
+import 'network_test.dart';
 
 class PrintPreview extends StatefulWidget {
   final TrxModel trx;
@@ -425,18 +428,35 @@ class _PrintPreviewState extends PrintPreviewController {
   }
 
   Future<bool> checkBluetooth() async {
-    PermissionStatus status = await Permission.locationWhenInUse.request();
+    // Request multiple permissions for iOS
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.locationWhenInUse,
+      Permission.bluetooth,
+      Permission.bluetoothConnect,
+      Permission.bluetoothScan,
+    ].request();
+    
     bool isOn = await _bluetooth.isOn;
+    
+    // Check if any of the required permissions are granted
+    bool hasLocationPermission = statuses[Permission.locationWhenInUse] == PermissionStatus.granted;
+    bool hasBluetoothPermission = statuses[Permission.bluetooth] == PermissionStatus.granted;
+    bool hasBluetoothConnectPermission = statuses[Permission.bluetoothConnect] == PermissionStatus.granted;
+    bool hasBluetoothScanPermission = statuses[Permission.bluetoothScan] == PermissionStatus.granted;
+    
+    // For iOS, we need at least location permission and bluetooth permissions
+    bool hasRequiredPermissions = hasLocationPermission && 
+                                 (hasBluetoothPermission || hasBluetoothConnectPermission || hasBluetoothScanPermission);
 
-    if (status == PermissionStatus.granted) {
+    if (hasRequiredPermissions) {
       if (isOn) {
         return true;
       } else {
-        showToast(context, 'Bluetooth belum aktif');
+        showToast(context, 'Bluetooth belum aktif. Silakan aktifkan Bluetooth di pengaturan.');
         return false;
       }
     } else {
-      showToast(context, 'Aplikasi memerlukan izin bluetooth');
+      showToast(context, 'Aplikasi memerlukan izin lokasi dan bluetooth untuk menemukan printer');
       return false;
     }
   }
@@ -499,9 +519,25 @@ class _PrintPreviewState extends PrintPreviewController {
     bool status = await checkBluetooth();
     if (!status) return;
 
-    BluetoothDevice device = await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => SelectPrinterPage()));
-    if (device == null) return;
+    // Add debugging for iOS
+    print("Bluetooth status: $status");
+    print("Platform: ${Platform.operatingSystem}");
+    
+    BluetoothDevice device;
+    try {
+      device = await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => SelectPrinterPage()));
+      if (device == null) {
+        print("No device selected");
+        return;
+      }
+      
+      print("Selected device: ${device.name} (${device.address})");
+    } catch (e) {
+      print("Error selecting printer: $e");
+      showToast(context, 'Gagal memilih printer: $e');
+      return;
+    }
 
     if (await _bluetooth.isConnected) await _bluetooth.disconnect();
     await _bluetooth.connect(device);
@@ -581,6 +617,20 @@ class _PrintPreviewState extends PrintPreviewController {
               setState(() {
                 showEditor = !showEditor;
               });
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.bluetooth),
+            onPressed: () {
+              // Navigate to Bluetooth test page
+              Navigator.push(context, MaterialPageRoute(builder: (_) => BluetoothTestPage()));
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.wifi),
+            onPressed: () {
+              // Navigate to Network printer test page
+              Navigator.push(context, MaterialPageRoute(builder: (_) => NetworkTestPage()));
             },
           ),
         ],

@@ -59,8 +59,8 @@ class _MorePageState extends State<MorePage> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
                             Container(
-                              width: 70,
-                              height: 70,
+                              width: 50,
+                              height: 50,
                               decoration: BoxDecoration(
                                 color: Color(0xFFA259FF).withOpacity(0.06),
                                 shape: BoxShape.circle,
