@@ -59,25 +59,50 @@ class _MorePageState extends State<MorePage> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
                             Container(
-                              width: 50,
-                              height: 50,
+                              width: 55,
+                              height: 55,
                               decoration: BoxDecoration(
-                                color: Color(0xFFA259FF).withOpacity(0.06),
+                                color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
                                     color: Color(0xFFA259FF).withOpacity(0.3),
                                     blurRadius: 6,
-                                    offset: Offset(0, 3),
+                                    offset: Offset(0, 9),
                                   ),
                                 ],
                               ),
                               alignment: Alignment.center,
                               child: CachedNetworkImage(
                                 imageUrl: menu.icon,
-                                width: 45,
-                                height: 45,
+                                width: 35,
+                                height: 35,
                                 fit: BoxFit.contain,
+                                errorWidget: (context, url, error) => Container(
+                                  width: 35,
+                                  height: 35,
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFA259FF).withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.image_not_supported,
+                                    size: 20,
+                                    color: Color(0xFFA259FF),
+                                  ),
+                                ),
+                                placeholder: (context, url) => Container(
+                                  width: 35,
+                                  height: 35,
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFA259FF).withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFA259FF)),
+                                  ),
+                                ),
                               ),
                             ),
                             SizedBox(height: 12.0),

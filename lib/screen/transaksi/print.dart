@@ -26,6 +26,7 @@ import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
 import 'test_bluetooth_ios.dart';
 import 'network_test.dart';
+import 'network_printer_complete.dart';
 
 class PrintPreview extends StatefulWidget {
   final TrxModel trx;
@@ -1146,12 +1147,27 @@ class _PrintPreviewState extends PrintPreviewController {
           ),
         ]),
       ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.print),
-        backgroundColor: packageName == 'com.lariz.mobile'
-            ? Theme.of(context).secondaryHeaderColor
-            : Theme.of(context).primaryColor,
-        onPressed: startPrint,
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: "network",
+            child: Icon(Icons.wifi),
+            backgroundColor: Colors.blue,
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => NetworkPrinterCompletePage(trx: widget.trx, isPostpaid: widget.isPostpaid)));
+            },
+          ),
+          SizedBox(height: 10),
+          FloatingActionButton(
+            heroTag: "bluetooth",
+            child: Icon(Icons.print),
+            backgroundColor: packageName == 'com.lariz.mobile'
+                ? Theme.of(context).secondaryHeaderColor
+                : Theme.of(context).primaryColor,
+            onPressed: startPrint,
+          ),
+        ],
       ),
     );
   }

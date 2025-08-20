@@ -59,6 +59,56 @@ class _NetworkTestPageState extends State<NetworkTestPage> {
     }
   }
 
+  Future<void> _testPrint() async {
+    if (_ipController.text.isEmpty) {
+      _showError('IP Address harus diisi');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _status = 'Testing print...';
+    });
+
+    try {
+      final socket = await Socket.connect(
+        _ipController.text, 
+        int.tryParse(_portController.text) ?? 9100,
+        timeout: Duration(seconds: 10)
+      );
+      
+      // Simple test print data (ESC/POS commands)
+      final testData = [
+        0x1B, 0x40, // Initialize printer
+        0x1B, 0x61, 0x01, // Center alignment
+        0x54, 0x45, 0x53, 0x54, 0x20, 0x50, 0x52, 0x49, 0x4E, 0x54, // "TEST PRINT"
+        0x0A, 0x0A, // New lines
+        0x1B, 0x61, 0x00, // Left alignment
+        0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x74, 0x65, 0x73, 0x74, // "This is a test"
+        0x0A, 0x0A, 0x0A, // New lines
+      ];
+      
+      socket.add(testData);
+      await socket.flush();
+      await socket.close();
+      
+      setState(() {
+        _isLoading = false;
+        _status = 'Print test successful!';
+      });
+      
+      _showSuccess('Test print berhasil dikirim!');
+      
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _status = 'Print test failed: $e';
+      });
+      
+      _showError('Gagal mengirim test print: $e');
+    }
+  }
+
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -139,16 +189,30 @@ class _NetworkTestPageState extends State<NetworkTestPage> {
                     SizedBox(height: 8),
                     Text(_status),
                     SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _isLoading ? null : _testConnection,
-                      icon: _isLoading 
-                        ? SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : Icon(Icons.wifi_find),
-                      label: Text('Test Connection'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _testConnection,
+                            icon: _isLoading 
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : Icon(Icons.wifi_find),
+                            label: Text('Test Connection'),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading ? null : _testPrint,
+                            icon: Icon(Icons.print),
+                            label: Text('Test Print'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

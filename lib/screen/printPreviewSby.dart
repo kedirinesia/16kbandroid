@@ -23,6 +23,7 @@ import 'package:mobile/modules.dart';
 import 'package:mobile/provider/analitycs.dart';
 import 'package:mobile/screen/custom_alert_dialog.dart';  
 import 'package:mobile/screen/transaksi/select_printer.dart';
+import 'package:mobile/screen/transaksi/network_printer_complete.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
@@ -242,6 +243,17 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
     }
   }
 
+  // Method to generate receipt data for network printing
+  Future<Uint8List> generateReceiptData() async {
+    try {
+      final profile = await CapabilityProfile.load();
+      return v1(PaperSize.mm58, profile);
+    } catch (e) {
+      print('Error generating receipt data: $e');
+      throw Exception('Error generating receipt data: $e');
+    }
+  }
+
   Uint8List v1(PaperSize paperSize, CapabilityProfile profile) {
     try {
       Generator ticket = Generator(paperSize, profile);
@@ -445,15 +457,22 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
       );
       // Print custom footer text if available
       if (customFooterText.isNotEmpty) {
-        bytes += ticket.text(
-          customFooterText,
-          styles: PosStyles(
-            align: PosAlign.center,
-            width: sizes[i],
-            height: sizes[i],
-          ),
-          linesAfter: 3,
-        );
+        // Clean the footer text to remove invalid characters
+        String cleanFooterText = customFooterText
+            .replaceAll('\n', ' ')  // Replace newlines with spaces
+            .replaceAll(RegExp(r'[^\x20-\x7E]'), ''); // Remove non-printable characters
+        
+        if (cleanFooterText.isNotEmpty) {
+          bytes += ticket.text(
+            cleanFooterText,
+            styles: PosStyles(
+              align: PosAlign.center,
+              width: sizes[i],
+              height: sizes[i],
+            ),
+            linesAfter: 3,
+          );
+        }
       }
 
       return Uint8List.fromList(bytes);
@@ -1223,12 +1242,43 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
           ),
         ]),
       ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.print),
-        backgroundColor: packageName == 'com.lariz.mobile'
-            ? Theme.of(context).secondaryHeaderColor
-            : Theme.of(context).primaryColor,
-        onPressed: startPrint,
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: "network_print",
+            child: Icon(Icons.wifi),
+            backgroundColor: packageName == 'com.lariz.mobile'
+                ? Theme.of(context).secondaryHeaderColor
+                : Theme.of(context).primaryColor,
+            onPressed: () async {
+              try {
+                // Generate receipt data using the same method as Bluetooth printing
+                final receiptData = await generateReceiptData();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => NetworkPrinterCompletePage(
+                      trx: trxData,
+                      isPostpaid: widget.isPostpaid,
+                      customReceiptData: receiptData,
+                    ),
+                  ),
+                );
+              } catch (e) {
+                showToast(context, 'Error generating receipt data: $e');
+              }
+            },
+          ),
+          SizedBox(height: 16),
+          FloatingActionButton(
+            heroTag: "bluetooth_print",
+            child: Icon(Icons.print),
+            backgroundColor: packageName == 'com.lariz.mobile'
+                ? Theme.of(context).secondaryHeaderColor
+                : Theme.of(context).primaryColor,
+            onPressed: startPrint,
+          ),
+        ],
       ),
     );
   }
@@ -1266,7 +1316,7 @@ abstract class PrintPreviewSbyController extends State<PrintPreviewSby>
       // Extract custom header and footer text
       customHeaderText = responseData['header_text'] ?? "STRUK PEMBAYARAN PDAM SURYA SEMBADA KOTA SURABAYA";
       //customFooterText = responseData['footer_text'] ?? "";
-      customFooterText = "PDAM SURABAYA MENYATAKAN STRUK INI SEBAGAI BUKTI PEMBAYARAN YANG SAH, MOHON DISIMPAN \n\nINFO TAGIHAN DIAKSES DI www.pdam‑sby.go.id CALL CENTER (031)‑292‑6666.";
+      customFooterText = "PDAM SURABAYA MENYATAKAN STRUK INI SEBAGAI BUKTI PEMBAYARAN YANG SAH, MOHON DISIMPAN. INFO TAGIHAN DIAKSES DI www.pdam-sby.go.id CALL CENTER (031)-292-6666.";
 
 
       print("=== CUSTOM HEADER TEXT ===");
