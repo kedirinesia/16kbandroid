@@ -323,7 +323,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   SizedBox(height: 20),
-                  configAppBloc.info.valueWrapper?.value.register
+                  (configAppBloc.info.valueWrapper?.value?.register == true)
                       ? Align(
                           alignment: Alignment.bottomCenter,
                           child: _createAccountLabel(),
