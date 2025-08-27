@@ -256,177 +256,189 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       
       
       // ================================================================================
-      // DUMMY DATA UNTUK TESTING - UNCOMMENT UNTUK MENGGUNAKAN DUMMY DATA
       // ================================================================================
-      List<Map<String, dynamic>> hardcodedData = [
-        {
-          '_id': '1',
-          'status': 2, // Success
-          'admin': 0,
-          'counter': 1,
-          'tujuan': '081234567890',
-          'produk_id': {
-            '_id': 'prod1',
-            'name': 'Pulsa Telkomsel',
-            'type': 2, // Pulsa/PPOB
-            'icon': 'https://ayoba.co.id/dokumen/provider/tsel.png',
-            'category': 'pulsa',
-          },
-          'harga_jual': 25000,
-          'sn': 'SN001',
-          'payment_by': 'saldo',
-          'payment_id': 'PAY001',
-          'created_at': '2024-01-15T10:30:00Z',
-          'updated_at': '2024-01-15T10:35:00Z',
-          'keterangan': 'Pulsa Telkomsel 25K',
-          'poin': 25,
-          'print': [],
-        },
-        {
-          '_id': '2',
-          'status': 2, // Success
-          'admin': 0,
-          'counter': 1,
-          'tujuan': '4321', // Dummy data untuk nomor 4321
-          'produk_id': {
-            '_id': 'prod2',
-            'name': 'Pulsa Indosat',
-            'type': 2, // Pulsa/PPOB
-            'icon': 'https://ayoba.co.id/dokumen/provider/indosat.png',
-            'category': 'pulsa',
-          },
-          'harga_jual': 20000,
-          'sn': 'SN002',
-          'payment_by': 'saldo',
-          'payment_id': 'PAY002',
-          'created_at': '2024-01-14T15:20:00Z',
-          'updated_at': '2024-01-14T15:25:00Z',
-          'keterangan': 'Pulsa Indosat 20K',
-          'poin': 20,
-          'print': [],
-        },
-        {
-          '_id': '3',
-          'status': 2, // Success
-          'admin': 0,
-          'counter': 1,
-          'tujuan': '085876543210',
-          'produk_id': {
-            '_id': 'prod3',
-            'name': 'Pulsa Three',
-            'type': 2, // Pulsa/PPOB
-            'icon': 'https://ayoba.co.id/dokumen/provider/three.png',
-            'category': 'pulsa',
-          },
-          'harga_jual': 15000,
-          'sn': 'SN003',
-          'payment_by': 'saldo',
-          'payment_id': 'PAY003',
-          'created_at': '2024-01-13T12:15:00Z',
-          'updated_at': '2024-01-13T12:20:00Z',
-          'keterangan': 'Pulsa Three 15K',
-          'poin': 15,
-          'print': [],
-        },
-        {
-          '_id': '4',
-          'status': 2, // Success
-          'admin': 0,
-          'counter': 1,
-          'tujuan': '4321', // Dummy data kedua untuk nomor 4321
-          'produk_id': {
-            '_id': 'prod4',
-            'name': 'Pulsa XL',
-            'type': 2, // Pulsa/PPOB
-            'icon': 'https://ayoba.co.id/dokumen/provider/xl.png',
-            'category': 'pulsa',
-          },
-          'harga_jual': 30000,
-          'sn': 'SN004',
-          'payment_by': 'saldo',
-          'payment_id': 'PAY004',
-          'created_at': '2024-01-12T14:45:00Z',
-          'updated_at': '2024-01-12T14:50:00Z',
-          'keterangan': 'Pulsa XL 30K',
-          'poin': 30,
-          'print': [],
-        },
-        {
-          '_id': '5',
-          'status': 2, // Success
-          'admin': 0,
-          'counter': 1,
-          'tujuan': '088112233445',
-          'produk_id': {
-            '_id': 'prod5',
-            'name': 'Pulsa Smartfren',
-            'type': 2, // Pulsa/PPOB
-            'icon': 'https://ayoba.co.id/dokumen/provider/smart.png',
-            'category': 'pulsa',
-          },
-          'harga_jual': 15000,
-          'sn': 'SN005',
-          'payment_by': 'saldo',
-          'payment_id': 'PAY005',
-          'created_at': '2024-01-11T11:30:00Z',
-          'updated_at': '2024-01-11T11:35:00Z',
-          'keterangan': 'Pulsa Smartfren 15K',
-          'poin': 15,
-          'print': [],
-        },
-      ];
+      // DUMMY DATA UNTUK TESTING - COMMENT UNTUK MENGGUNAKAN API ASLI
+      // ================================================================================
+      // List<Map<String, dynamic>> hardcodedData = [
+      //   {
+      //     '_id': '1',
+      //     'status': 2, // Success
+      //     'admin': 0,
+      //     'counter': 1,
+      //     'tujuan': '081234567890',
+      //     'produk_id': {
+      //       '_id': 'prod1',
+      //       'name': 'Pulsa Telkomsel',
+      //       'type': 2, // Pulsa/PPOB
+      //       'icon': 'https://ayoba.co.id/dokumen/provider/tsel.png',
+      //       'category': 'pulsa',
+      //     },
+      //     'harga_jual': 25000,
+      //     'sn': 'SN001',
+      //     'payment_by': 'saldo',
+      //     'payment_id': 'PAY001',
+      //     'created_at': '2024-01-15T10:30:00Z',
+      //     'updated_at': '2024-01-15T10:35:00Z',
+      //     'keterangan': 'Pulsa Telkomsel 25K',
+      //     'poin': 25,
+      //     'print': [],
+      //   },
+      //   {
+      //     '_id': '2',
+      //     'status': 2, // Success
+      //     'admin': 0,
+      //     'counter': 1,
+      //     'tujuan': '4321', // Dummy data untuk nomor 4321
+      //     'produk_id': {
+      //       '_id': 'prod2',
+      //       'name': 'Pulsa Indosat',
+      //       'type': 2, // Pulsa/PPOB
+      //       'icon': 'https://ayoba.co.id/dokumen/provider/indosat.png',
+      //       'category': 'pulsa',
+      //     },
+      //     'harga_jual': 20000,
+      //     'sn': 'SN002',
+      //     'payment_by': 'saldo',
+      //     'payment_id': 'PAY002',
+      //     'created_at': '2024-01-14T15:20:00Z',
+      //     'updated_at': '2024-01-14T15:25:00Z',
+      //     'keterangan': 'Pulsa Indosat 20K',
+      //     'poin': 20,
+      //     'print': [],
+      //   },
+      //   {
+      //     '_id': '3',
+      //     'status': 2, // Success
+      //     'admin': 0,
+      //     'counter': 1,
+      //     'tujuan': '085876543210',
+      //     'produk_id': {
+      //       '_id': 'prod3',
+      //       'name': 'Pulsa Three',
+      //       'type': 2, // Pulsa/PPOB
+      //       'icon': 'https://ayoba.co.id/dokumen/provider/three.png',
+      //       'category': 'pulsa',
+      //     },
+      //     'harga_jual': 15000,
+      //     'sn': 'SN003',
+      //     'payment_by': 'saldo',
+      //     'payment_id': 'PAY003',
+      //     'created_at': '2024-01-13T12:15:00Z',
+      //     'updated_at': '2024-01-13T12:20:00Z',
+      //     'keterangan': 'Pulsa Three 15K',
+      //     'poin': 15,
+      //     'print': [],
+      //   },
+      //   {
+      //     '_id': '4',
+      //     'status': 2, // Success
+      //     'admin': 0,
+      //     'counter': 1,
+      //     'tujuan': '4321', // Dummy data kedua untuk nomor 4321
+      //     'produk_id': {
+      //       '_id': 'prod4',
+      //       'name': 'Pulsa XL',
+      //       'type': 2, // Pulsa/PPOB
+      //       'icon': 'https://ayoba.co.id/dokumen/provider/xl.png',
+      //       'category': 'pulsa',
+      //     },
+      //     'harga_jual': 30000,
+      //     'sn': 'SN004',
+      //     'payment_by': 'saldo',
+      //     'payment_id': 'PAY004',
+      //     'created_at': '2024-01-12T14:45:00Z',
+      //     'updated_at': '2024-01-12T14:50:00Z',
+      //     'keterangan': 'Pulsa XL 30K',
+      //     'poin': 30,
+      //     'print': [],
+      //   },
+      //   {
+      //     '_id': '5',
+      //     'status': 2, // Success
+      //     'admin': 0,
+      //     'counter': 1,
+      //     'tujuan': '088112233445',
+      //     'produk_id': {
+      //       '_id': 'prod5',
+      //       'name': 'Pulsa Smartfren',
+      //       'type': 2, // Pulsa/PPOB
+      //       'icon': 'https://ayoba.co.id/dokumen/provider/smart.png',
+      //       'category': 'pulsa',
+      //     },
+      //     'harga_jual': 15000,
+      //     'sn': 'SN005',
+      //     'payment_by': 'saldo',
+      //     'payment_id': 'PAY005',
+      //     'created_at': '2024-01-11T11:30:00Z',
+      //     'updated_at': '2024-01-11T11:35:00Z',
+      //     'keterangan': 'Pulsa Smartfren 15K',
+      //     'poin': 15,
+      //     'print': [],
+      //   },
+      // ];
 
-      // Convert hardcoded data to TransactionHistoryModel
-      List<TransactionHistoryModel> hardcodedHistory = hardcodedData
-          .map((json) => TransactionHistoryModel.fromJson(json))
-          .toList();
+      // // Convert hardcoded data to TransactionHistoryModel
+      // List<TransactionHistoryModel> hardcodedHistory = hardcodedData
+      //     .map((json) => TransactionHistoryModel.fromJson(json))
+      //     .toList();
       
-      setState(() {
-        transactionHistory = hardcodedHistory;
-        // Get recent successful transactions for pulsa/ppob
-        recentTransactions = hardcodedHistory
-            .where((trx) => 
-                trx.status == 2 && // Successful transactions only
-                trx.tujuan.isNotEmpty &&
-                (trx.tujuan.startsWith('08') || trx.tujuan == '4321') && // Include 4321
-                trx.produkId?.type == 2) // Pulsa/PPOB products
-            .take(5) // Show 5 most recent
-            .toList();
-      });
-      
-      print('Loaded ${recentTransactions.length} recent transactions for testing');
-      
-      // ================================================================================
-      // KODE API ASLI - COMMENT UNTUK MENGGUNAKAN DUMMY DATA
-      // ================================================================================
-      // http.Response response = await http.get(
-      //   Uri.parse('$apiUrl/trx/list'),
-      //   headers: {'Authorization': bloc.token.valueWrapper?.value},
-      // );
-
-      // if (response.statusCode == 200) {
-      //   List<dynamic> datas = json.decode(response.body)['data'];
-      //   List<TransactionHistoryModel> apiHistory = datas
-      //       .map((item) => TransactionHistoryModel.fromJson(item))
-      //       .map((item) => TransactionHistoryModel.fromJson(item))
-      //       .toList();
-      
-      //   setState(() {
-      //     transactionHistory = apiHistory;
-      //     // Get recent successful transactions for pulsa/ppob
-      //     recentTransactions = apiHistory
+      // setState(() {
+      //     transactionHistory = hardcodedHistory;
+      //     // Filter transaksi pulsa berdasarkan description yang mengandung "Pulsa"
+      //     recentTransactions = hardcodedHistory
       //         .where((trx) => 
-      //             trx.status == 2 && // Successful transactions only
+      //             trx.status == 2 && // Transaksi sukses saja
       //             trx.tujuan.isNotEmpty &&
-      //             trx.tujuan.startsWith('08') && // Indonesian phone numbers
-      //             trx.produkId?.type == 2) // Pulsa/PPOB products
-      //         .take(3) // Show only 3 most recent
+      //             (trx.tujuan.startsWith('08') || trx.tujuan == '4321') && // Include 4321
+      //             _isPulsaProduct(trx) // Filter produk pulsa berdasarkan description
+      //         )
+      //         .take(5) // Tampilkan 5 transaksi terbaru
       //         .toList();
-      //   });
-      // } else {
-      //   print('Failed to load transaction history: ${response.statusCode}');
-      //   print('Response: ${response.body}');
-      // }
+      // });
+      
+      // print('Loaded ${recentTransactions.length} recent pulsa transactions');
+      // print('Filtered using pulsa description filter');
+      
+      // ================================================================================
+      // KODE API ASLI - MENGGUNAKAN API YANG SAMA DENGAN PLN
+      // ================================================================================
+      http.Response response = await http.get(
+        Uri.parse('$apiUrl/trx/list?page=0'),
+        headers: {'Authorization': bloc.token.valueWrapper?.value},
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> datas = json.decode(response.body)['data'];
+        List<TransactionHistoryModel> apiHistory = datas
+            .map((item) => TransactionHistoryModel.fromJson(item))
+            .toList();
+        
+        setState(() {
+          transactionHistory = apiHistory;
+          
+          // Filter transaksi pulsa berdasarkan description yang mengandung "Pulsa"
+          recentTransactions = apiHistory
+              .where((trx) => 
+                  trx.status == 2 && // Transaksi sukses saja
+                  trx.tujuan.isNotEmpty &&
+                  trx.tujuan.startsWith('08') && // Nomor HP Indonesia
+                  _isPulsaProduct(trx) // Filter produk pulsa berdasarkan description
+              )
+              .take(5) // Tampilkan 5 transaksi terbaru
+              .toList();
+        });
+        
+        print('Loaded ${recentTransactions.length} recent pulsa transactions from API');
+        print('Filtered using pulsa description filter');
+        print('Total transactions: ${apiHistory.length}');
+        
+      } else {
+        print('Failed to load transaction history: ${response.statusCode}');
+        print('Response: ${response.body}');
+        
+        // Fallback ke hardcoded data jika API gagal
+        _loadHardcodedPulsaData();
+      }
       // ================================================================================
       
     } catch (e) {
@@ -446,6 +458,155 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
         });
       }
     }
+  }
+
+  // Filter produk pulsa yang lebih fleksibel
+  bool _isPulsaProduct(TransactionHistoryModel trx) {
+    print('🔍 Debugging filter for transaction: ${trx.produkId?.name}');
+    
+    // Cek nama produk mengandung kata yang berhubungan dengan pulsa (case insensitive)
+    if (trx.produkId != null && trx.produkId.name != null) {
+      String productName = trx.produkId.name.toLowerCase();
+      print('📱 Product name: $productName');
+      
+      // Filter yang lebih fleksibel untuk pulsa
+      bool isPulsa = productName.contains('pulsa') || 
+                     productName.contains('telkomsel') ||
+                     productName.contains('indosat') ||
+                     productName.contains('xl') ||
+                     productName.contains('three') ||
+                     productName.contains('smartfren') ||
+                     productName.contains('axis') ||
+                     productName.contains('tsel') ||
+                     productName.contains('simpati') ||
+                     productName.contains('as') ||
+                     productName.contains('matrix') ||
+                     productName.contains('mentari');
+      
+      print('✅ Is pulsa product: $isPulsa');
+      return isPulsa;
+    }
+    
+    // Fallback: cek keterangan transaksi
+    if (trx.keterangan != null && trx.keterangan.isNotEmpty) {
+      String keterangan = trx.keterangan.toLowerCase();
+      print('📝 Keterangan: $keterangan');
+      
+      bool isPulsaKeterangan = keterangan.contains('pulsa') ||
+                               keterangan.contains('telkomsel') ||
+                               keterangan.contains('indosat') ||
+                               keterangan.contains('xl') ||
+                               keterangan.contains('three') ||
+                               keterangan.contains('smartfren') ||
+                               keterangan.contains('axis') ||
+                               keterangan.contains('tsel') ||
+                               keterangan.contains('simpati') ||
+                               keterangan.contains('as') ||
+                               keterangan.contains('matrix') ||
+                               keterangan.contains('mentari');
+      
+      print('✅ Is pulsa keterangan: $isPulsaKeterangan');
+      return isPulsaKeterangan;
+    }
+    
+    // Fallback: cek type produk (type 2 = PPOB/Pulsa)
+    bool isTypePulsa = trx.produkId != null && trx.produkId.type == 2;
+    print('🔢 Type check (type 2): $isTypePulsa');
+    
+    return isTypePulsa;
+  }
+
+  // Load hardcoded data sebagai fallback
+  void _loadHardcodedPulsaData() {
+    List<Map<String, dynamic>> hardcodedData = [
+      {
+        '_id': '1',
+        'status': 2, // Success
+        'admin': 0,
+        'counter': 1,
+        'tujuan': '081234567890',
+        'produk_id': {
+          '_id': 'prod1',
+          'name': 'Pulsa Telkomsel Reguler',
+          'type': 2, // Pulsa/PPOB
+          'icon': 'https://ayoba.co.id/dokumen/provider/tsel.png',
+          'category': 'pulsa',
+        },
+        'harga_jual': 25000,
+        'sn': 'SN001',
+        'payment_by': 'saldo',
+        'payment_id': 'PAY001',
+        'created_at': '2024-01-15T10:30:00Z',
+        'updated_at': '2024-01-15T10:35:00Z',
+        'keterangan': 'Pulsa Telkomsel Reguler denom 25Ribu',
+        'poin': 25,
+        'print': [],
+      },
+      {
+        '_id': '2',
+        'status': 2, // Success
+        'admin': 0,
+        'counter': 1,
+        'tujuan': '085678901234',
+        'produk_id': {
+          '_id': 'prod2',
+          'name': 'Pulsa Indosat Reguler',
+          'type': 2, // Pulsa/PPOB
+          'icon': 'https://ayoba.co.id/dokumen/provider/indosat.png',
+          'category': 'pulsa',
+        },
+        'harga_jual': 20000,
+        'sn': 'SN002',
+        'payment_by': 'saldo',
+        'payment_id': 'PAY002',
+        'created_at': '2024-01-14T15:20:00Z',
+        'updated_at': '2024-01-14T15:25:00Z',
+        'keterangan': 'Pulsa Indosat Reguler denom 20Ribu',
+        'poin': 20,
+        'print': [],
+      },
+    ];
+
+    // Convert hardcoded data to TransactionHistoryModel
+    List<TransactionHistoryModel> hardcodedHistory = hardcodedData
+        .map((json) => TransactionHistoryModel.fromJson(json))
+        .toList();
+    
+    setState(() {
+      transactionHistory = hardcodedHistory;
+      recentTransactions = hardcodedHistory;
+    });
+    
+    print('Loaded ${recentTransactions.length} hardcoded pulsa transactions as fallback');
+  }
+
+  // Dapatkan statistik filter pulsa
+  Map<String, dynamic> _getPulsaFilterStats() {
+    if (transactionHistory.isEmpty) {
+      return {
+        'total_transactions': 0,
+        'pulsa_transactions': 0,
+        'filter_percentage': 0.0,
+        'providers': [],
+      };
+    }
+
+    int totalTransactions = transactionHistory.length;
+    int pulsaTransactions = recentTransactions.length;
+    double filterPercentage = (pulsaTransactions / totalTransactions) * 100;
+    
+    // Dapatkan provider unik dari transaksi pulsa
+    Set<String> providers = recentTransactions
+        .where((trx) => trx.produkId != null && trx.produkId.name != null)
+        .map((trx) => trx.produkId.name)
+        .toSet();
+
+    return {
+      'total_transactions': totalTransactions,
+      'pulsa_transactions': pulsaTransactions,
+      'filter_percentage': filterPercentage,
+      'providers': providers.toList(),
+    };
   }
 
   // Get operator icon based on phone number prefix
@@ -891,14 +1052,15 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                             },
                           )),
                 
-                // Transaksi Terakhir Section
+                // Transaksi Terakhir Section - Design PLN Style
                 if (loadingHistory)
                   Container(
-                    margin: EdgeInsets.symmetric(horizontal: 20),
+                    margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     padding: EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.red, width: 2),
-                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Row(
                       children: [
@@ -907,7 +1069,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
                           ),
                         ),
                         SizedBox(width: 10),
@@ -915,7 +1077,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                           'Memuat riwayat transaksi...',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.red,
+                            color: Colors.grey.shade700,
                           ),
                         ),
                       ],
@@ -924,39 +1086,51 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                 // FITUR SUGGEST HISTORY NOMOR PEMBELI - EKSKLUSIF UNTUK APLIKASI SEEPAYS
                 else if (recentTransactions.isNotEmpty && packageName == 'com.seepaysbiller.app')
                   Container(
-                    margin: EdgeInsets.symmetric(horizontal: 20),
-                    constraints: BoxConstraints(
-                      minHeight: 180, // Minimum height
-                      maxHeight: MediaQuery.of(context).size.height * 0.3, // Responsive max height
-                    ),
+                    margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.red, width: 2),
-                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header tetap
+                        // Header - PLN Style
                         Container(
                           padding: EdgeInsets.all(15),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(8),
+                              topRight: Radius.circular(8),
+                            ),
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  'Transaksi Terakhir',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red,
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.history,
+                                    size: 20,
+                                    color: Theme.of(context).primaryColor,
                                   ),
-                                ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Nomor Terakhir',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ],
                               ),
                               IconButton(
                                 onPressed: () => loadTransactionHistory(),
                                 icon: Icon(
                                   Icons.refresh,
-                                  color: Colors.red,
+                                  color: Theme.of(context).primaryColor,
                                   size: 20,
                                 ),
                               ),
@@ -1035,7 +1209,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                         // Phone number
                                         Expanded(
                                           child: Text(
-                                            maskPhoneNumber(trx.tujuan),
+                                            trx.tujuan, // Tampilkan nomor lengkap
                                             style: TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w600,
@@ -1099,6 +1273,8 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                       ],
                     ),
                   ),
+                
+
                 
                 // Info text
                 // if (recentTransactions.isNotEmpty)

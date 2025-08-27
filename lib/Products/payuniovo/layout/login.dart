@@ -102,11 +102,78 @@ class _LoginPageState extends State<LoginPage> {
 
       print('=== PAYUNIOVO API RESPONSE ===');
       print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
+      print('Response Headers: ${response.headers}');
+      print('Response Body Length: ${response.body.length}');
+      print('Response Body (first 500 chars): ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
       print('===============================');
       
+      // Validasi response body sebelum parsing JSON
+      if (response.body.isEmpty) {
+        throw Exception('Response body kosong dari server');
+      }
+      
+      // Cek apakah response adalah JSON valid
+      if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+        print('=== PAYUNIOVO INVALID JSON RESPONSE ===');
+        print('Response tidak valid JSON: ${response.body.substring(0, 200)}');
+        print('========================================');
+        
+        // Coba decode dengan error handling yang lebih baik
+        String errorMessage = 'Response tidak valid dari server';
+        if (response.body.contains('<!DOCTYPE html>') || response.body.contains('<html>')) {
+          errorMessage = 'Server mengembalikan halaman HTML, kemungkinan ada masalah dengan server';
+        } else if (response.body.contains('timeout') || response.body.contains('Timeout')) {
+          errorMessage = 'Request timeout, silakan coba lagi';
+        } else if (response.body.contains('connection') || response.body.contains('Connection')) {
+          errorMessage = 'Gagal terhubung ke server, periksa koneksi internet';
+        }
+        
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Error Server'),
+              content: Text(errorMessage),
+              actions: [
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+      
       if (response.statusCode == 200) {
-        Map<String, dynamic> responseData = json.decode(response.body);
+        Map<String, dynamic> responseData;
+        try {
+          responseData = json.decode(response.body);
+        } catch (jsonError) {
+          print('=== PAYUNIOVO JSON PARSE ERROR ===');
+          print('JSON Parse Error: $jsonError');
+          print('Response Body: ${response.body}');
+          print('==================================');
+          
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Error Parsing Response'),
+                content: Text('Gagal memproses response dari server. Silakan coba lagi atau hubungi customer service.'),
+                actions: [
+                  TextButton(
+                    child: Text('OK'),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              );
+            },
+          );
+          return;
+        }
+        
         Map<String, dynamic> data = responseData['data'];
         
         print('=== PAYUNIOVO SUCCESS ===');
@@ -115,27 +182,41 @@ class _LoginPageState extends State<LoginPage> {
         print('Validate ID: ${data['validate_id']}');
         print('========================');
         
-                  // Save phone and PIN if rememberMe is true, else remove it.
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          if (rememberMe) {
-            await prefs.setString('phone', phoneNumber);
-            await prefs.setString('pin', _password.text.trim());
-            print('=== PAYUNIOVO SAVE CREDENTIALS ===');
-            print('Saved phone: $phoneNumber');
-            print('Saved PIN: ${_password.text.trim()}');
-            print('==================================');
-          } else {
-            await prefs.remove('phone');
-            await prefs.remove('pin');
-            print('=== PAYUNIOVO REMOVE CREDENTIALS ===');
-            print('Credentials removed');
-            print('====================================');
-          }
+        // Save phone and PIN if rememberMe is true, else remove it.
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        if (rememberMe) {
+          await prefs.setString('phone', phoneNumber);
+          await prefs.setString('pin', _password.text.trim());
+          print('=== PAYUNIOVO SAVE CREDENTIALS ===');
+          print('Saved phone: $phoneNumber');
+          print('Saved PIN: ${_password.text.trim()}');
+          print('==================================');
+        } else {
+          await prefs.remove('phone');
+          await prefs.remove('pin');
+          print('=== PAYUNIOVO REMOVE CREDENTIALS ===');
+          print('Credentials removed');
+          print('====================================');
+        }
 
         Nav.pushReplacement(OtpPage(data['phone'], data['validate_id']));
       } else {
-        // Handle error response
-        Map<String, dynamic> errorData = json.decode(response.body);
+        // Handle error response dengan validasi JSON yang lebih baik
+        Map<String, dynamic> errorData;
+        try {
+          errorData = json.decode(response.body);
+        } catch (jsonError) {
+          print('=== PAYUNIOVO ERROR JSON PARSE FAILED ===');
+          print('JSON Parse Error: $jsonError');
+          print('Error Response Body: ${response.body}');
+          print('==========================================');
+          
+          // Fallback error message
+          errorData = {
+            'status': response.statusCode,
+            'message': 'Gagal memproses error response dari server'
+          };
+        }
         
         print('=== PAYUNIOVO ERROR ===');
         print('Error Status: ${errorData['status']}');
@@ -215,11 +296,18 @@ class _LoginPageState extends State<LoginPage> {
         throw errorData;
       }
     } catch (e) {
+      print('=== PAYUNIOVO EXCEPTION ===');
+      print('Exception type: ${e.runtimeType}');
+      print('Exception: $e');
+      print('===========================');
+      
       String msg;
       if (e is Map<String, dynamic>) {
         msg = e['message'] ?? 'Terjadi kesalahan';
       } else if (e is FormatException) {
-        msg = e.message;
+        msg = 'Format response tidak valid: ${e.message}';
+      } else if (e.toString().contains('unexpected character')) {
+        msg = 'Response dari server tidak valid. Silakan coba lagi atau hubungi customer service.';
       } else {
         msg = e.toString();
       }

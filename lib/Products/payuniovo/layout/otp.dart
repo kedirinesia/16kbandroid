@@ -148,55 +148,130 @@ class _OtpPageState extends State<OtpPage> {
       loading = true;
     });
 
-    http.Response response = await http.post(
-      Uri.parse('$apiUrl/user/login/validate'),
-      headers: {
-        'Content-Type': 'application/json',
-        'merchantCode': sigVendor,
-      },
-      body: json.encode({
-        'phone': widget.phone,
-        'otp': otp1.text + otp2.text + otp3.text + otp4.text,
-        'validate_id': this.validateId,
-      }),
-    );
+    try {
+      print('=== PAYUNIOVO OTP VERIFY START ===');
+      print('Phone: ${widget.phone}');
+      print('OTP: ${otp1.text + otp2.text + otp3.text + otp4.text}');
+      print('Validate ID: $validateId');
+      print('API URL: $apiUrl/user/login/validate');
+      print('Merchant Code: $sigVendor');
+      print('==================================');
 
-    dynamic data = json.decode(response.body);
+      http.Response response = await http.post(
+        Uri.parse('$apiUrl/user/login/validate'),
+        headers: {
+          'Content-Type': 'application/json',
+          'merchantCode': sigVendor,
+        },
+        body: json.encode({
+          'phone': widget.phone,
+          'otp': otp1.text + otp2.text + otp3.text + otp4.text,
+          'validate_id': this.validateId,
+        }),
+      );
 
-    if (response.statusCode == 200) {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String token = data['data'];
-      prefs.setString('token', token);
+      print('=== PAYUNIOVO OTP RESPONSE ===');
+      print('Status Code: ${response.statusCode}');
+      print('Response Headers: ${response.headers}');
+      print('Response Body Length: ${response.body.length}');
+      print('Response Body (first 500 chars): ${response.body.substring(0, response.body.length > 500 ? 500 : response.body.length)}');
+      print('===============================');
 
-      Map<String, dynamic> userInfo = await getUser(token);
-      if (userInfo['status'] == 200) {
-        UserModel profile = UserModel.fromJson(userInfo['data']);
-        if (!profile.aktif) {
-          setState(() {
-            loading = false;
-            Nav.clearAllAndPush(DisablePage(DisableType.member));
-          });
+      // Validasi response body sebelum parsing JSON
+      if (response.body.isEmpty) {
+        throw Exception('Response body kosong dari server');
+      }
+
+      // Cek apakah response adalah JSON valid
+      if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+        print('=== PAYUNIOVO OTP INVALID JSON RESPONSE ===');
+        print('Response tidak valid JSON: ${response.body.substring(0, 200)}');
+        print('============================================');
+        
+        String errorMessage = 'Response tidak valid dari server';
+        if (response.body.contains('<!DOCTYPE html>') || response.body.contains('<html>')) {
+          errorMessage = 'Server mengembalikan halaman HTML, kemungkinan ada masalah dengan server';
+        } else if (response.body.contains('timeout') || response.body.contains('Timeout')) {
+          errorMessage = 'Request timeout, silakan coba lagi';
+        } else if (response.body.contains('connection') || response.body.contains('Connection')) {
+          errorMessage = 'Gagal terhubung ke server, periksa koneksi internet';
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage))
+        );
+        setState(() {
+          loading = false;
+        });
+        return;
+      }
+
+      dynamic data;
+      try {
+        data = json.decode(response.body);
+      } catch (jsonError) {
+        print('=== PAYUNIOVO OTP JSON PARSE ERROR ===');
+        print('JSON Parse Error: $jsonError');
+        print('Response Body: ${response.body}');
+        print('=====================================');
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memproses response dari server. Silakan coba lagi.'))
+        );
+        setState(() {
+          loading = false;
+        });
+        return;
+      }
+
+      if (response.statusCode == 200) {
+        print('=== PAYUNIOVO OTP SUCCESS ===');
+        print('Response Data: $data');
+        print('Token: ${data['data']}');
+        print('============================');
+        
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String token = data['data'];
+        prefs.setString('token', token);
+
+        Map<String, dynamic> userInfo = await getUser(token);
+        if (userInfo['status'] == 200) {
+          UserModel profile = UserModel.fromJson(userInfo['data']);
+          if (!profile.aktif) {
+            setState(() {
+              loading = false;
+              Nav.clearAllAndPush(DisablePage(DisableType.member));
+            });
+          } else {
+            prefs.setString('id', profile.id);
+            prefs.setString('nama', profile.nama);
+            prefs.setInt('saldo', profile.saldo);
+            prefs.setInt('poin', profile.poin);
+            prefs.setInt('komisi', profile.komisi);
+
+            /*
+            GET PROFILE USER
+            */
+            bloc.user..add(profile);
+            bloc.token..add(token);
+            bloc.userId..add(prefs.getString('id'));
+            bloc.username..add(prefs.getString('nama'));
+            bloc.poin..add(prefs.getInt('poin'));
+            bloc.saldo..add(prefs.getInt('saldo'));
+            bloc.komisi..add(prefs.getInt('komisi'));
+
+            sendDeviceToken();
+            await getFlashBanner(context);
+
+            Widget nextWidget = configAppBloc
+                        .layoutApp.valueWrapper?.value['home'] !=
+                    null
+                ? configAppBloc.layoutApp.valueWrapper?.value['home']
+                : templateConfig[configAppBloc.templateCode.valueWrapper?.value];
+            Nav.clearAllAndPush(nextWidget);
+          }
         } else {
-          prefs.setString('id', profile.id);
-          prefs.setString('nama', profile.nama);
-          prefs.setInt('saldo', profile.saldo);
-          prefs.setInt('poin', profile.poin);
-          prefs.setInt('komisi', profile.komisi);
-
-          /*
-          GET PROFILE USER
-          */
-          bloc.user..add(profile);
-          bloc.token..add(token);
-          bloc.userId..add(prefs.getString('id'));
-          bloc.username..add(prefs.getString('nama'));
-          bloc.poin..add(prefs.getInt('poin'));
-          bloc.saldo..add(prefs.getInt('saldo'));
-          bloc.komisi..add(prefs.getInt('komisi'));
-
-          sendDeviceToken();
-          await getFlashBanner(context);
-
+          await prefs.clear();
           Widget nextWidget = configAppBloc
                       .layoutApp.valueWrapper?.value['home'] !=
                   null
@@ -205,29 +280,51 @@ class _OtpPageState extends State<OtpPage> {
           Nav.clearAllAndPush(nextWidget);
         }
       } else {
-        await prefs.clear();
-        Widget nextWidget = configAppBloc
-                    .layoutApp.valueWrapper?.value['home'] !=
-                null
-            ? configAppBloc.layoutApp.valueWrapper?.value['home']
-            : templateConfig[configAppBloc.templateCode.valueWrapper?.value];
-        Nav.clearAllAndPush(nextWidget);
+        print('=== PAYUNIOVO OTP ERROR ===');
+        print('Error Status: ${response.statusCode}');
+        print('Error Data: $data');
+        print('===========================');
+        
+        String errorMessage = 'Verifikasi OTP gagal';
+        if (data is Map<String, dynamic> && data['message'] != null) {
+          errorMessage = data['message'];
+        }
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage))
+        );
+        
+        // Clear OTP fields
+        otp1.clear();
+        otp2.clear();
+        otp3.clear();
+        otp4.clear();
       }
-      // Navigator.of(context).pushAndRemoveUntil(
-      //     MaterialPageRoute(builder: (_) => PayuniApp()),
-      //     (Route<dynamic> route) => false);
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(data['message'])));
-      otp1.clear();
-      otp2.clear();
-      otp3.clear();
-      otp4.clear();
+    } catch (e) {
+      print('=== PAYUNIOVO OTP EXCEPTION ===');
+      print('Exception type: ${e.runtimeType}');
+      print('Exception: $e');
+      print('==============================');
+      
+      String errorMessage = 'Terjadi kesalahan saat verifikasi OTP';
+      if (e.toString().contains('unexpected character')) {
+        errorMessage = 'Response dari server tidak valid. Silakan coba lagi.';
+      } else if (e is FormatException) {
+        errorMessage = 'Format response tidak valid: ${e.message}';
+      } else {
+        errorMessage = e.toString();
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage))
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
-
-    setState(() {
-      loading = false;
-    });
   }
 
   Widget selectMethod() {

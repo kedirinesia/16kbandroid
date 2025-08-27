@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:mobile/bloc/Bloc.dart' show bloc;
 import 'package:mobile/screen/transaksi/detail_postpaid.dart';
 import 'package:mobile/screen/transaksi/verifikasi_pin.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 abstract class DetailDenomPostpaidController extends State<DetailDenomPostpaid>
     with TickerProviderStateMixin {
@@ -27,10 +28,222 @@ abstract class DetailDenomPostpaidController extends State<DetailDenomPostpaid>
   PostpaidInquiryModel inq;
   String menuLogo = '';
 
+  // Suggest numbers variables - EKSKLUSIF UNTUK PAYUNIOVO
+  String packageName = '';
+  List<String> suggestNumbers = [];
+  bool loadingSuggest = false;
+
   @override
   void initState() {
-    _getMenuLogo();
     super.initState();
+    print('=== DetailDenomPostpaidController initState() START ===');
+    print('Menu Name: ${widget.menu.name}');
+    print('Menu Category ID: ${widget.menu.category_id}');
+    
+    print('Calling _getPackageName()...');
+    _getPackageName().then((_) {
+      print('✅ _getPackageName() completed, now calling getSuggestNumbers()...');
+      getSuggestNumbers();
+    });
+    
+    print('Calling _getMenuLogo()...');
+    _getMenuLogo();
+    print('getSuggestNumbers() scheduled (after _getPackageName)');
+    print('=== DetailDenomPostpaidController initState() END ===');
+  }
+
+  Future<void> _getPackageName() async {
+    print('=== _getPackageName() CALLED (POSTPAID) ===');
+    final info = await PackageInfo.fromPlatform();
+    print('Package Info (POSTPAID): ${info.packageName}');
+    setState(() {
+      packageName = info.packageName;
+    });
+    print('Package Name Set (POSTPAID): $packageName');
+    print('=== END _getPackageName() (POSTPAID) ===');
+  }
+
+  Future<void> getSuggestNumbers() async {
+    print('=== getSuggestNumbers() CALLED (POSTPAID) ===');
+    print('Package Name (POSTPAID): $packageName');
+    print('Menu Name (POSTPAID): ${widget.menu.name}');
+    print('Menu Category ID (POSTPAID): ${widget.menu.category_id}');
+    
+    // FITUR SUGGEST HISTORY NOMOR PEMBELI - EKSKLUSIF UNTUK APLIKASI PAYUNIOVO
+    if (packageName != 'mobile.payuni.id' && packageName != 'co.payuni.id') {
+      print('❌ Package name tidak didukung (POSTPAID): $packageName');
+      print('❌ Supported packages: mobile.payuni.id, co.payuni.id');
+      setState(() {
+        suggestNumbers = [];
+      });
+      return;
+    }
+    
+    print('✅ Package name didukung (POSTPAID): $packageName');
+    print('✅ Akan melanjutkan ke API call (POSTPAID)');
+    
+    try {
+      print('🔄 Setting loadingSuggest to true');
+      setState(() {
+        loadingSuggest = true;
+      });
+      print('✅ loadingSuggest set to: $loadingSuggest');
+      
+      // API khusus Payuniovo untuk suggest numbers
+      final String apiUrl = 'https://payuni-app.findig.id/api/v1/trx/lastTransaction?kategori_id=${widget.menu.category_id}&limit=10&skip=0';
+      print('🌐 API URL: $apiUrl');
+      print('🔑 Authorization Header: ${bloc.token.valueWrapper?.value}');
+      
+      final response = await http.get(
+        Uri.parse(apiUrl),
+        headers: {
+          'Authorization': bloc.token.valueWrapper?.value,
+        },
+      );
+      
+      print('=== DEBUG SUGGEST NUMBERS (POSTPAID) ===');
+      print('📡 HTTP Request completed');
+      print('🌐 API Endpoint: $apiUrl');
+      print('📊 Response Status: ${response.statusCode}');
+      print('📄 Response Headers: ${response.headers}');
+      print('📝 Response Body: ${response.body}');
+      print('📏 Response Body Length: ${response.body.length}');
+      
+      if (response.statusCode == 200) {
+        print('✅ HTTP 200 OK - Processing response data');
+        
+        // Response langsung berupa array
+        try {
+          final List<dynamic> datas = json.decode(response.body) as List<dynamic>;
+          print('✅ JSON parsing successful');
+          print('📊 Parsed Data (POSTPAID): $datas');
+          print('📊 Data Count (POSTPAID): ${datas.length}');
+          print('📊 Data Type: ${datas.runtimeType}');
+          
+          if (datas.isEmpty) {
+            print('⚠️ Response data kosong - tidak ada transaksi');
+            setState(() {
+              suggestNumbers = [];
+            });
+            return;
+          }
+          
+          // Sort by tanggal desc for recency
+          print('🔄 Sorting data by tanggal (descending)');
+          datas.sort((a, b) {
+            final String ac = (a['tanggal'] ?? '');
+            final String bc = (b['tanggal'] ?? '');
+            print('📅 Item A tanggal: "$ac"');
+            print('📅 Item B tanggal: "$bc"');
+            
+            DateTime ad, bd;
+            try { 
+              ad = DateTime.parse(ac); 
+              print('✅ Item A parsed: $ad');
+            } catch (e) { 
+              ad = DateTime.fromMillisecondsSinceEpoch(0); 
+              print('❌ Item A parse error: $e, using default: $ad');
+            }
+            try { 
+              bd = DateTime.parse(bc); 
+              print('✅ Item B parsed: $bd');
+            } catch (e) { 
+              bd = DateTime.fromMillisecondsSinceEpoch(0); 
+              print('❌ Item B parse error: $e, using default: $bd');
+            }
+            
+            final result = bd.compareTo(ad);
+            print('🔄 Sort result: $result (${bd.compareTo(ad)})');
+            return result;
+          });
+          
+          print('✅ Data sorting completed');
+          print('📊 Sorted Data (first 3 items): ${datas.take(3).toList()}');
+          
+          final Set<String> uniqueTargets = <String>{};
+          print('🔄 Starting data filtering...');
+          
+          for (int i = 0; i < datas.length; i++) {
+            final dynamic item = datas[i];
+            print('--- Processing Item $i ---');
+            print('📄 Raw Item: $item');
+            
+            final String tujuanItem = (item['tujuan'] ?? '').toString().trim();
+            print('📱 Tujuan Item: "$tujuanItem"');
+            print('📏 Tujuan Length: ${tujuanItem.length}');
+            
+            if (tujuanItem.isEmpty) {
+              print('❌ Tujuan kosong, skip item');
+              continue;
+            }
+            
+            // Filter untuk postpaid - terima semua format yang masuk dari API
+            // PLN: ID Pelanggan (bisa 12 digit, dimulai dengan angka apapun)
+            // HP: Nomor HP (bisa dimulai dengan 08, 62, dll)
+            // Lainnya: ID pelanggan untuk layanan lain
+            if (tujuanItem.length >= 8 && tujuanItem.length <= 20) {
+              print('✅ Nomor valid (${tujuanItem.length} digit), adding to targets');
+              uniqueTargets.add(tujuanItem);
+              print('📊 Current unique targets: $uniqueTargets');
+              print('📊 Current count: ${uniqueTargets.length}');
+              
+              if (uniqueTargets.length >= 5) {
+                print('🛑 Reached limit of 5, stopping');
+                break;
+              }
+            } else {
+              print('❌ Nomor tidak valid: length=${tujuanItem.length}');
+            }
+            print('--- End Processing Item $i ---');
+          }
+          
+          print('✅ Data filtering completed');
+          print('📊 Final Unique Targets: $uniqueTargets');
+          print('📊 Final Count: ${uniqueTargets.length}');
+          
+          setState(() {
+            suggestNumbers = uniqueTargets.toList();
+          });
+          print('✅ suggestNumbers updated in state: $suggestNumbers');
+          
+        } catch (e) {
+          print('❌ JSON parsing error: $e');
+          print('❌ Stack trace: ${StackTrace.current}');
+          setState(() {
+            suggestNumbers = [];
+          });
+        }
+      } else {
+        print('❌ API Response Error (POSTPAID): ${response.statusCode}');
+        print('❌ Response Body: ${response.body}');
+        setState(() {
+          suggestNumbers = [];
+        });
+      }
+    } catch (e) {
+      print('❌ Exception in getSuggestNumbers (POSTPAID): $e');
+      print('❌ Exception type: ${e.runtimeType}');
+      print('❌ Stack trace: ${StackTrace.current}');
+      setState(() {
+        suggestNumbers = [];
+      });
+      print('✅ suggestNumbers set to empty array due to exception');
+    } finally {
+      print('🔄 Finally block - setting loadingSuggest to false');
+      setState(() {
+        loadingSuggest = false;
+      });
+      print('✅ loadingSuggest set to: $loadingSuggest');
+      print('✅ Final suggestNumbers state: $suggestNumbers');
+      print('=== END getSuggestNumbers (POSTPAID) ===');
+    }
+  }
+
+  void selectSuggestNumber(String number) {
+    setState(() {
+      idpel.text = number;
+    });
+    print('✅ Selected suggest number: $number');
   }
 
   Future<void> _getMenuLogo() async {

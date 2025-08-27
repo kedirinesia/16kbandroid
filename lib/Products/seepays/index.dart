@@ -6,6 +6,8 @@ import 'config.dart';
 import 'color.dart';
 
 void main() {
+  print('SEEPAYS Token: $sigVendor');
+  
   var configApp = AppConfig(
     appDisplayName: namaApp,
     appInternalId: sigVendor,

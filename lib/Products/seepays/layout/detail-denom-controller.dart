@@ -87,6 +87,14 @@ abstract class SeepaysDetailDenomController extends State<SeepaysDetailDenom>
   }
 
   Future<void> getSuggestNumbers() async {
+    // FITUR SUGGEST HISTORY NOMOR PEMBELI - EKSKLUSIF UNTUK APLIKASI SEEPAYS
+    if (packageName != 'com.seepaysbiller.app') {
+      setState(() {
+        suggestNumbers = [];
+      });
+      return;
+    }
+
     if (!useApiSuggest) {
       setState(() {
         suggestNumbers = _hardcodedSuggestionsForMenu(widget.menu.name);

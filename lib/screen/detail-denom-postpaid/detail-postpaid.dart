@@ -245,6 +245,99 @@ class _DetailDenomPostpaidState extends DetailDenomPostpaidController {
                           cekTagihan(widget.menu.kodeProduk),
                     ),
             ),
+            
+            // FITUR SUGGEST HISTORY NOMOR PEMBELI - EKSKLUSIF UNTUK PAYUNIOVO
+            (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id')
+                ? Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          
+                        SizedBox(height: 4),
+                        
+                        // Loading State
+                        loadingSuggest
+                            ? Container(
+                                width: double.infinity,
+                                height: 40,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[400]),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Loading History . . . ...',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : suggestNumbers.isNotEmpty
+                                ? Container(
+                                    height: 40,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: suggestNumbers.length,
+                                      itemBuilder: (context, index) {
+                                        return Container(
+                                          margin: EdgeInsets.only(right: 8),
+                                          child: ActionChip(
+                                            label: Text(
+                                              suggestNumbers[index],
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            backgroundColor: Colors.blue[50],
+                                            labelStyle: TextStyle(color: Colors.blue[700]),
+                                            onPressed: () => selectSuggestNumber(suggestNumbers[index]),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Container(
+                                    height: 40,
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: Colors.orange[600],
+                                            size: 16,
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            'Belum pernah transaksi produk ini',
+                                            style: TextStyle(
+                                              color: Colors.orange[600],
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                      ],
+                    ),
+                  )
+                : SizedBox(),
+            
             Flexible(
               flex: 1,
               child: loading

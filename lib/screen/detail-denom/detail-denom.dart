@@ -275,24 +275,71 @@ class _DetailDenomState extends DetailDenomController {
                           ),
                         ),
                 ),
-                // Suggest number chips/list
-                suggestNumbers.isNotEmpty
+                // Suggest number chips/list - EKSKLUSIF UNTUK SEEPAYS DAN PAYUNIOVO
+                (packageName == 'com.seepaysbiller.app' || packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id')
                     ? Container(
                         width: double.infinity,
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: suggestNumbers
-                              .map((e) => ActionChip(
-                                    label: Text(e),
-                                    onPressed: () {
-                                      setState(() {
-                                        tujuan.text = e;
-                                      });
-                                    },
-                                  ))
-                              .toList(),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 4),
+                            
+                            // Loading State
+                            loadingSuggest
+                                ? Container(
+                                    width: double.infinity,
+                                    height: 40,
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[400]),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Text(
+                                          'Loading History . . . ...',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Container(
+                                    height: 40,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: suggestNumbers.length,
+                                      itemBuilder: (context, index) {
+                                        return Container(
+                                          margin: EdgeInsets.only(right: 8),
+                                          child: ActionChip(
+                                            label: Text(
+                                              suggestNumbers[index],
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            backgroundColor: Colors.blue[50],
+                                            labelStyle: TextStyle(color: Colors.blue[700]),
+                                            onPressed: () {
+                                              setState(() {
+                                                tujuan.text = suggestNumbers[index];
+                                              });
+                                            },
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                          ],
                         ),
                       )
                     : SizedBox(),

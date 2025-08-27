@@ -179,9 +179,85 @@ class _RegisterUserState extends State<RegisterUser> {
       print('Response Content-Type: ${response.headers['content-type']}');
       print('Response Content-Length: ${response.headers['content-length']}');
       
+      // Validasi response body sebelum parsing JSON
+      if (response.body.isEmpty) {
+        throw Exception('Response body kosong dari server');
+      }
+      
+      // Cek apakah response adalah JSON valid
+      if (!response.body.trim().startsWith('{') && !response.body.trim().startsWith('[')) {
+        print('=== PAYUNIOVO REGISTRATION INVALID JSON RESPONSE ===');
+        print('Response tidak valid JSON: ${response.body.substring(0, 200)}');
+        print('====================================================');
+        
+        String errorMessage = 'Response tidak valid dari server';
+        if (response.body.contains('<!DOCTYPE html>') || response.body.contains('<html>')) {
+          errorMessage = 'Server mengembalikan halaman HTML, kemungkinan ada masalah dengan server';
+        } else if (response.body.contains('timeout') || response.body.contains('Timeout')) {
+          errorMessage = 'Request timeout, silakan coba lagi';
+        } else if (response.body.contains('connection') || response.body.contains('Connection')) {
+          errorMessage = 'Gagal terhubung ke server, periksa koneksi internet';
+        }
+        
+        showDialog(
+          context: context,
+          builder: (_) {
+            return AlertDialog(
+              title: Text('Error Server'),
+              content: Text(errorMessage),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(),
+                  child: Text(
+                    'TUTUP',
+                    style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+      
       if (response.statusCode == 200) {
         print('=== REGISTRATION SUCCESS ===');
-        var data = jsonDecode(response.body);
+        var data;
+        try {
+          data = jsonDecode(response.body);
+        } catch (jsonError) {
+          print('=== PAYUNIOVO REGISTRATION JSON PARSE ERROR ===');
+          print('JSON Parse Error: $jsonError');
+          print('Response Body: ${response.body}');
+          print('===============================================');
+          
+          showDialog(
+            context: context,
+            builder: (_) {
+              return AlertDialog(
+                title: Text('Error Parsing Response'),
+                content: Text('Gagal memproses response dari server. Silakan coba lagi atau hubungi customer service.'),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () =>
+                        Navigator.of(context, rootNavigator: true).pop(),
+                    child: Text(
+                      'TUTUP',
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+          return;
+        }
+        
         print('Response data type: ${data.runtimeType}');
         print('Response data keys: ${data.keys.toList()}');
         String message = data['message'];
@@ -200,7 +276,18 @@ class _RegisterUserState extends State<RegisterUser> {
         } catch (parseError) {
           print('Failed to parse error response: $parseError');
           print('Raw error response body: ${response.body}');
-          errorData = {'message': 'Failed to parse error response'};
+          
+          // Coba deteksi tipe error dari response body
+          String errorMessage = 'Gagal memproses error response dari server';
+          if (response.body.contains('<!DOCTYPE html>') || response.body.contains('<html>')) {
+            errorMessage = 'Server mengembalikan halaman HTML, kemungkinan ada masalah dengan server';
+          } else if (response.body.contains('timeout') || response.body.contains('Timeout')) {
+            errorMessage = 'Request timeout, silakan coba lagi';
+          } else if (response.body.contains('connection') || response.body.contains('Connection')) {
+            errorMessage = 'Gagal terhubung ke server, periksa koneksi internet';
+          }
+          
+          errorData = {'message': errorMessage};
         }
         
         String message = errorData['message'] ?? 'Unknown error';

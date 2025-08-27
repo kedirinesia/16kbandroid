@@ -268,8 +268,8 @@ class _SeepaysDetailDenomState extends SeepaysDetailDenomController {
                           ),
                         ),
                 ),
-                // Suggest numbers chips below the input
-                suggestNumbers.isNotEmpty
+                // Suggest numbers chips below the input - EKSKLUSIF UNTUK SEEPAYS
+                suggestNumbers.isNotEmpty && packageName == 'com.seepaysbiller.app'
                     ? Container(
                         width: double.infinity,
                         padding: EdgeInsets.symmetric(horizontal: 20),
