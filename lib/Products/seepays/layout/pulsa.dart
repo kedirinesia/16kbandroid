@@ -60,6 +60,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       'title': 'Pulsa',
     });
     // Load transaction history
+    print('🔄 Seepays: Loading transaction history on init...');
     loadTransactionHistory();
   }
 
@@ -400,40 +401,77 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       // print('Filtered using pulsa description filter');
       
       // ================================================================================
-      // KODE API ASLI - MENGGUNAKAN API YANG SAMA DENGAN PLN
+      // KODE API BARU - MENGGUNAKAN API LAST TRANSACTION UNTUK SUGGEST HISTORY
       // ================================================================================
       http.Response response = await http.get(
-        Uri.parse('$apiUrl/trx/list?page=0'),
+        Uri.parse('https://app.payuni.co.id/api/v1/trx/lastTransaction?kategori_id=5eb704e8c78b5393e4ab3fe6&limit=10&skip=0'),
         headers: {'Authorization': bloc.token.valueWrapper?.value},
       );
 
       if (response.statusCode == 200) {
-        List<dynamic> datas = json.decode(response.body)['data'];
-        List<TransactionHistoryModel> apiHistory = datas
-            .map((item) => TransactionHistoryModel.fromJson(item))
-            .toList();
+        print('✅ Seepays: API Response received successfully');
+        print('API Response: ${response.body}');
         
-        setState(() {
-          transactionHistory = apiHistory;
+        try {
+          // Parse response dari API lastTransaction dengan error handling
+          dynamic responseData = json.decode(response.body);
+          List<dynamic> datas = [];
           
-          // Filter transaksi pulsa berdasarkan description yang mengandung "Pulsa"
-          recentTransactions = apiHistory
-              .where((trx) => 
-                  trx.status == 2 && // Transaksi sukses saja
-                  trx.tujuan.isNotEmpty &&
-                  trx.tujuan.startsWith('08') && // Nomor HP Indonesia
-                  _isPulsaProduct(trx) // Filter produk pulsa berdasarkan description
-              )
-              .take(5) // Tampilkan 5 transaksi terbaru
-              .toList();
-        });
-        
-        print('Loaded ${recentTransactions.length} recent pulsa transactions from API');
-        print('Filtered using pulsa description filter');
-        print('Total transactions: ${apiHistory.length}');
+          // Handle response format sesuai dengan API lastTransaction
+          if (responseData is Map<String, dynamic>) {
+            // Format: {"status": 200, "data": [...]}
+            datas = responseData['data'] ?? [];
+            print('📋 Seepays: Response format: Map with data array');
+          } else if (responseData is List) {
+            // Format: [...] (langsung array)
+            datas = responseData;
+            print('📋 Seepays: Response format: Direct array');
+          } else {
+            print('⚠️ Seepays: Unexpected response format: ${responseData.runtimeType}');
+            datas = [];
+          }
+          
+          print('📊 Seepays: Found ${datas.length} transactions in response');
+          print('📋 Seepays: Response data type: ${responseData.runtimeType}');
+          
+          if (datas.isNotEmpty) {
+            List<TransactionHistoryModel> apiHistory = datas
+                .map((item) => TransactionHistoryModel.fromJson(item))
+                .toList();
+            
+            setState(() {
+              transactionHistory = apiHistory;
+              
+              // Filter transaksi pulsa berdasarkan kategori_id yang sudah spesifik
+              recentTransactions = apiHistory
+                  .where((trx) => 
+                      trx.status == 2 && // Transaksi sukses saja
+                      trx.tujuan.isNotEmpty &&
+                      trx.tujuan.startsWith('08') // Nomor HP Indonesia
+                  )
+                  .take(10) // Tampilkan sampai 10 transaksi terbaru sesuai limit API
+                  .toList();
+            });
+            
+            print('🎯 Seepays: Filtered to ${recentTransactions.length} recent pulsa transactions');
+            print('📱 Seepays: Recent transactions: ${recentTransactions.map((t) => t.tujuan).toList()}');
+          } else {
+            print('📭 Seepays: No transactions found in response');
+            setState(() {
+              recentTransactions = [];
+            });
+          }
+          
+        } catch (parseError) {
+          print('❌ Seepays: Error parsing API response: $parseError');
+          print('🔍 Seepays: Raw response: ${response.body}');
+          
+          // Fallback ke hardcoded data jika parsing gagal
+          _loadHardcodedPulsaData();
+        }
         
       } else {
-        print('Failed to load transaction history: ${response.statusCode}');
+        print('❌ Seepays: Failed to load transaction history: ${response.statusCode}');
         print('Response: ${response.body}');
         
         // Fallback ke hardcoded data jika API gagal
@@ -458,6 +496,19 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
         });
       }
     }
+  }
+
+  // Get product logo from API response
+  String _getProductLogo(TransactionHistoryModel trx) {
+    // Cek apakah ada logo produk dari kategori sesuai struktur API response
+    if (trx.produkId != null && 
+        trx.produkId.kategoriId != null && 
+        trx.produkId.kategoriId.urlImage != null &&
+        trx.produkId.kategoriId.urlImage.isNotEmpty) {
+      return trx.produkId.kategoriId.urlImage;
+    }
+    // Return empty string jika tidak ada logo
+    return '';
   }
 
   // Filter produk pulsa yang lebih fleksibel
@@ -1165,8 +1216,33 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                     // Header row dengan icon dan nomor
                                     Row(
                                       children: [
-                                        // Operator icon
-                                        if (getOperatorIcon(trx.tujuan).isNotEmpty)
+                                        // Product logo dari API atau operator icon fallback
+                                        if (_getProductLogo(trx).isNotEmpty)
+                                          Container(
+                                            width: 32,
+                                            height: 32,
+                                            child: CachedNetworkImage(
+                                              imageUrl: _getProductLogo(trx),
+                                              fit: BoxFit.contain,
+                                              placeholder: (context, url) => SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                              ),
+                                              errorWidget: (context, url, error) => Container(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.shade300,
+                                                  borderRadius: BorderRadius.circular(16),
+                                                ),
+                                                child: Icon(
+                                                  Icons.phone,
+                                                  size: 16,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        else if (getOperatorIcon(trx.tujuan).isNotEmpty)
                                           Container(
                                             width: 32,
                                             height: 32,

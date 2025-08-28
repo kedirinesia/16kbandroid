@@ -75,26 +75,48 @@ class TransactionHistoryModel extends TrxModel {
 
 class ProdukId {
   String id;
+  String kodeProduk;
   String name;
   int type;
-  String icon;
-  String category;
+  String description;
+  KategoriId kategoriId;
 
   ProdukId({
     this.id,
+    this.kodeProduk,
     this.name,
     this.type,
-    this.icon,
-    this.category,
+    this.description,
+    this.kategoriId,
   });
 
   factory ProdukId.fromJson(Map<String, dynamic> json) {
     return ProdukId(
       id: json['_id'],
-      name: json['name'],
+      kodeProduk: json['kode_produk'] ?? '',
+      name: json['nama'] ?? '',
       type: json['type'] ?? 0,
-      icon: json['icon'],
-      category: json['category'],
+      description: json['description'] ?? '',
+      kategoriId: json['kategori_id'] != null 
+          ? KategoriId.fromJson(json['kategori_id'])
+          : null,
+    );
+  }
+}
+
+class KategoriId {
+  String id;
+  String urlImage;
+
+  KategoriId({
+    this.id,
+    this.urlImage,
+  });
+
+  factory KategoriId.fromJson(Map<String, dynamic> json) {
+    return KategoriId(
+      id: json['_id'],
+      urlImage: json['url_image'] ?? '',
     );
   }
 }
