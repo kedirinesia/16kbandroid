@@ -105,8 +105,19 @@ abstract class SeepaysDetailDenomController extends State<SeepaysDetailDenom>
     try {
       setState(() { loadingSuggest = true; });
 
+      // Gunakan kategori ID untuk pulsa jika tersedia
+      String apiEndpoint = '$apiUrl/trx/list?page=0&limit=50';
+      if (widget.menu.category_id != null && widget.menu.category_id.isNotEmpty) {
+        apiEndpoint = '$apiUrl/trx/list?page=0&limit=50&kategori_id=${widget.menu.category_id}';
+      } else if (widget.menu.name.toLowerCase().contains('pulsa')) {
+        // Fallback untuk pulsa jika category_id kosong
+        apiEndpoint = '$apiUrl/trx/list?page=0&limit=50&kategori_id=685b71969a3036284f0d8fec';
+      }
+      
+      print('🌐 Seepays API Endpoint: $apiEndpoint');
+      
       final response = await http.get(
-        Uri.parse('$apiUrl/trx/list?page=0&limit=50'),
+        Uri.parse(apiEndpoint),
         headers: { 'Authorization': bloc.token.valueWrapper?.value },
       );
 

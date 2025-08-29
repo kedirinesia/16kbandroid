@@ -10,6 +10,8 @@ import 'package:mobile/component/webview.dart';
 import 'package:mobile/Products/lariz/layout/qris/qris_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mobile/screen/profile/cs/cs.dart';
+import 'package:mobile/Products/seepays/config.dart' as seepaysConfig;
+import 'package:webview_flutter/webview_flutter.dart';
 
 class MainApp extends StatefulWidget {
   @override
@@ -22,7 +24,6 @@ class _MainAppState extends State<MainApp> {
   List<Widget> get halaman => [
         Home2App(),
         HistoryPage(),
-        _LivechatTab(),
         ProfilePage(),
       ];
 
@@ -126,7 +127,14 @@ class _MainAppState extends State<MainApp> {
               Expanded(
                 child: InkWell(
                   onTap: () {
-                    setState(() => pageIndex = 2);
+                    // Navigate to livechat webview directly
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => _LivechatWebview(
+                          url: seepaysConfig.liveChat,
+                        ),
+                      ),
+                    );
                   },
                   child: Container(
                     padding: EdgeInsets.only(top: 8.0),
@@ -134,9 +142,7 @@ class _MainAppState extends State<MainApp> {
                       children: <Widget>[
                         Icon(
                           Icons.forum_rounded,
-                          color: pageIndex == 2
-                              ? Theme.of(context).primaryColor
-                              : Colors.grey,
+                          color: Colors.grey,
                           size: 25.0,
                         ),
                         SizedBox(height: 3.0),
@@ -150,7 +156,7 @@ class _MainAppState extends State<MainApp> {
               Expanded(
                 child: InkWell(
                   onTap: () {
-                    setState(() => pageIndex = 3);
+                    setState(() => pageIndex = 2);
                   },
                   child: Container(
                     padding: EdgeInsets.only(top: 8.0),
@@ -158,7 +164,7 @@ class _MainAppState extends State<MainApp> {
                       children: <Widget>[
                         Icon(
                           Icons.person_rounded,
-                          color: pageIndex == 3
+                          color: pageIndex == 2
                               ? Theme.of(context).primaryColor
                               : Colors.grey,
                           size: 25.0,
@@ -178,9 +184,181 @@ class _MainAppState extends State<MainApp> {
   }
 }
 
-class _LivechatTab extends StatelessWidget {
+class _LivechatWebview extends StatefulWidget {
+  final String url;
+  
+  _LivechatWebview({this.url});
+  
+  @override
+  _LivechatWebviewState createState() => _LivechatWebviewState();
+}
+
+class _LivechatWebviewState extends State<_LivechatWebview> {
+  WebViewController _controller;
+  bool isLoading = true;
+  bool canGoBack = false;
+  bool canGoForward = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return CS();
+    return Scaffold(
+      backgroundColor: Color(0xFFF6F7FB),
+      appBar: AppBar(
+        title: Text(
+          'Livechat SEEPAYS',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Color(0xFFA259FF),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => _controller.reload(),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          WebView(
+            initialUrl: widget.url,
+            javascriptMode: JavascriptMode.unrestricted,
+            onWebViewCreated: (WebViewController webViewController) {
+              _controller = webViewController;
+            },
+            onPageFinished: (url) {
+              setState(() {
+                isLoading = false;
+              });
+              // Check navigation state
+              _checkNavigationState();
+            },
+            onWebResourceError: (WebResourceError error) {
+              setState(() {
+                isLoading = false;
+              });
+              // Show error message
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal memuat livechat: ${error.description}'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                }
+              });
+            },
+            navigationDelegate: (NavigationRequest request) {
+              // Allow all navigation
+              return NavigationDecision.navigate;
+            },
+          ),
+          if (isLoading)
+            Container(
+              color: Colors.white,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFFA259FF),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Memuat Livechat...',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios,
+                color: canGoBack ? Color(0xFFA259FF) : Colors.grey,
+              ),
+              onPressed: canGoBack
+                  ? () async {
+                      if (await _controller.canGoBack()) {
+                        await _controller.goBack();
+                        _checkNavigationState();
+                      }
+                    }
+                  : null,
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.refresh,
+                color: Color(0xFFA259FF),
+              ),
+              onPressed: () => _controller.reload(),
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.arrow_forward_ios,
+                color: canGoForward ? Color(0xFFA259FF) : Colors.grey,
+              ),
+              onPressed: canGoForward
+                  ? () async {
+                      if (await _controller.canGoForward()) {
+                        await _controller.goForward();
+                        _checkNavigationState();
+                      }
+                    }
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _checkNavigationState() async {
+    if (mounted) {
+      bool back = await _controller.canGoBack();
+      bool forward = await _controller.canGoForward();
+      if (mounted) {
+        setState(() {
+          canGoBack = back;
+          canGoForward = forward;
+        });
+      }
+    }
   }
 }

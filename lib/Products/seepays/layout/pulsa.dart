@@ -23,6 +23,7 @@ import 'package:mobile/modules.dart';
 import 'package:mobile/provider/analitycs.dart';
 import 'package:mobile/screen/transaksi/inquiry_prepaid.dart';
 import 'package:mobile/screen/favorite-number/favorite-number.dart';
+import '../config.dart' as seepays_config;
 
 class Pulsa extends StatefulWidget {
   final MenuModel menuModel;
@@ -71,7 +72,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
     });
 
     http.Response response = await http.get(
-        Uri.parse('$apiUrl/product/pulsa?q=$nomor'),
+        Uri.parse('${seepays_config.apiUrl}/product/pulsa?q=$nomor'),
         headers: {'Authorization': bloc.token.valueWrapper?.value});
 
     if (response.statusCode == 200) {
@@ -403,8 +404,19 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       // ================================================================================
       // KODE API BARU - MENGGUNAKAN API LAST TRANSACTION UNTUK SUGGEST HISTORY
       // ================================================================================
+      // Gunakan kategori ID untuk pulsa jika tersedia
+      String apiEndpoint = '${seepays_config.apiUrl}/trx/list?page=0&limit=50';
+      if (widget.menuModel.category_id != null && widget.menuModel.category_id.isNotEmpty) {
+        apiEndpoint = '${seepays_config.apiUrl}/trx/list?page=0&limit=50&kategori_id=${widget.menuModel.category_id}';
+      } else if (widget.menuModel.name.toLowerCase().contains('pulsa')) {
+        // Fallback untuk pulsa jika category_id kosong
+        apiEndpoint = '${seepays_config.apiUrl}/trx/list?page=0&limit=50&kategori_id=685b71969a3036284f0d8fec';
+      }
+      
+      print('🌐 Seepays API Endpoint: $apiEndpoint');
+      
       http.Response response = await http.get(
-        Uri.parse('https://app.payuni.co.id/api/v1/trx/lastTransaction?kategori_id=5eb704e8c78b5393e4ab3fe6&limit=10&skip=0'),
+        Uri.parse(apiEndpoint),
         headers: {'Authorization': bloc.token.valueWrapper?.value},
       );
 
@@ -1137,215 +1149,70 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                 // FITUR SUGGEST HISTORY NOMOR PEMBELI - EKSKLUSIF UNTUK APLIKASI SEEPAYS
                 else if (recentTransactions.isNotEmpty && packageName == 'com.seepaysbiller.app')
                   Container(
-                    margin: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header - PLN Style
-                        Container(
-                          padding: EdgeInsets.all(15),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(8),
-                              topRight: Radius.circular(8),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.history,
-                                    size: 20,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Nomor Terakhir',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey.shade800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                onPressed: () => loadTransactionHistory(),
-                                icon: Icon(
-                                  Icons.refresh,
-                                  color: Theme.of(context).primaryColor,
-                                  size: 20,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Scrollable content - Horizontal scroll dengan responsive height
-                        Expanded(
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal, // Geser ke kanan
-                            padding: EdgeInsets.symmetric(horizontal: 15),
-                            itemCount: recentTransactions.length,
-                            itemBuilder: (context, index) {
-                              final trx = recentTransactions[index];
-                              return Container(
-                                width: MediaQuery.of(context).size.width * 0.7, // Responsive width
-                                constraints: BoxConstraints(
-                                  minWidth: 250, // Minimum width
-                                  maxWidth: 320, // Maximum width
-                                ),
-                                margin: EdgeInsets.only(right: 15),
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min, // Prevent overflow
+                        SizedBox(height: 2),
+                        
+                        // Loading State
+                        loadingHistory
+                            ? Container(
+                                width: double.infinity,
+                                height: 40,
+                                child: Row(
                                   children: [
-                                    // Header row dengan icon dan nomor
-                                    Row(
-                                      children: [
-                                        // Product logo dari API atau operator icon fallback
-                                        if (_getProductLogo(trx).isNotEmpty)
-                                          Container(
-                                            width: 32,
-                                            height: 32,
-                                            child: CachedNetworkImage(
-                                              imageUrl: _getProductLogo(trx),
-                                              fit: BoxFit.contain,
-                                              placeholder: (context, url) => SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                              ),
-                                              errorWidget: (context, url, error) => Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey.shade300,
-                                                  borderRadius: BorderRadius.circular(16),
-                                                ),
-                                                child: Icon(
-                                                  Icons.phone,
-                                                  size: 16,
-                                                  color: Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                        else if (getOperatorIcon(trx.tujuan).isNotEmpty)
-                                          Container(
-                                            width: 32,
-                                            height: 32,
-                                            child: CachedNetworkImage(
-                                              imageUrl: getOperatorIcon(trx.tujuan),
-                                              fit: BoxFit.contain,
-                                              placeholder: (context, url) => SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child: CircularProgressIndicator(strokeWidth: 2),
-                                              ),
-                                              errorWidget: (context, url, error) => Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey.shade300,
-                                                  borderRadius: BorderRadius.circular(16),
-                                                ),
-                                                child: Icon(
-                                                  Icons.phone,
-                                                  size: 16,
-                                                  color: Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                        else
-                                          Container(
-                                            width: 32,
-                                            height: 32,
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey.shade300,
-                                              borderRadius: BorderRadius.circular(16),
-                                            ),
-                                            child: Icon(
-                                              Icons.phone,
-                                              size: 16,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        SizedBox(width: 10),
-                                        // Phone number
-                                        Expanded(
-                                          child: Text(
-                                            trx.tujuan, // Tampilkan nomor lengkap
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                            overflow: TextOverflow.ellipsis, // Prevent text overflow
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 10),
-                                    // Provider name
-                                    Text(
-                                      trx.produkId?.name ?? 'Pulsa',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey.shade700,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      overflow: TextOverflow.ellipsis, // Prevent text overflow
-                                    ),
-                                    SizedBox(height: 6),
-                                    // Amount
-                                    Text(
-                                      'Rp ${trx.harga_jual.toStringAsFixed(0)}',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    ),
-                                    Spacer(), // Push button to bottom
-                                    SizedBox(height: 10),
-                                    // Select button - Full width
                                     SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton(
-                                        onPressed: () => selectRecentNumber(trx.tujuan),
-                                        style: ElevatedButton.styleFrom(
-                                          primary: Theme.of(context).primaryColor,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          padding: EdgeInsets.symmetric(vertical: 10),
-                                        ),
-                                        child: Text(
-                                          'Pilih Nomor',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[400]),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Loading History . . . ...',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
                                       ),
                                     ),
                                   ],
                                 ),
-                              );
-                            },
-                          ),
-                        ),
+                              )
+                            : Container(
+                                height: 40,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: recentTransactions.length,
+                                  itemBuilder: (context, index) {
+                                    final trx = recentTransactions[index];
+                                    return Container(
+                                      margin: EdgeInsets.only(right: 8),
+                                      child: ActionChip(
+                                        label: Text(
+                                          trx.tujuan,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        backgroundColor: Colors.blue[50],
+                                        labelStyle: TextStyle(color: Colors.blue[700]),
+                                        onPressed: () {
+                                          nomorHp.text = trx.tujuan;
+                                          // Trigger getDenom jika nomor valid
+                                          if (trx.tujuan.length >= 4 && trx.tujuan.startsWith('08')) {
+                                            getDenom(trx.tujuan);
+                                          }
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                       ],
                     ),
                   ),

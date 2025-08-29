@@ -69,38 +69,33 @@ abstract class PulsaController extends State<Pulsa>
 
       // API berbeda untuk Seepays vs Payuniovo
       String apiEndpoint;
+      
+      // Untuk menu PULSA, gunakan kategori_id default jika kosong
+      String kategoriId = widget.menuModel.category_id;
+      if (kategoriId == null || kategoriId.isEmpty) {
+        // Fallback untuk menu PULSA - gunakan kategori default sesuai package
+        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id') {
+          kategoriId = '5eb704e8c78b5393e4ab3fe6'; // Kategori default untuk Payuniovo
+        } else {
+          kategoriId = '685b71969a3036284f0d8fec'; // Kategori default untuk Seepays
+        }
+        print('⚠️ Category ID kosong, menggunakan fallback: $kategoriId');
+      }
+      
       if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id') {
         // API khusus Payuniovo
-        // Untuk menu PULSA, gunakan kategori_id default jika kosong
-        String kategoriId = widget.menuModel.category_id;
-        if (kategoriId == null || kategoriId.isEmpty) {
-          // Fallback untuk menu PULSA - gunakan kategori default
-          kategoriId = '5eb704e8c78b5393e4ab3fe6'; // Kategori default untuk PULSA
-          print('⚠️ Category ID kosong, menggunakan fallback: $kategoriId');
-        }
-        
-        // Validasi kategori_id tidak boleh kosong
-        if (kategoriId.isEmpty) {
-          print('❌ Kategori ID masih kosong setelah fallback, skip API call');
-          setState(() {
-            suggestNumbers = [];
-            loadingSuggest = false;
-          });
-          return;
-        }
-        
-        // Untuk menu PULSA, gunakan API tanpa kategori_id jika masih kosong
-        if (widget.menuModel.name.toLowerCase().contains('pulsa') && kategoriId.isEmpty) {
-          apiEndpoint = 'https://payuni-app.findig.id/api/v1/trx/lastTransaction?limit=5&skip=0';
-          print('🌐 Menggunakan API Payuniovo untuk PULSA tanpa kategori: $apiEndpoint');
-        } else {
-          apiEndpoint = 'https://payuni-app.findig.id/api/v1/trx/lastTransaction?kategori_id=$kategoriId&limit=5&skip=0';
-          print('🌐 Menggunakan API Payuniovo dengan kategori: $apiEndpoint');
-        }
+        // Gunakan kategori ID yang sudah di-fallback
+        apiEndpoint = 'https://payuni-app.findig.id/api/v1/trx/lastTransaction?kategori_id=$kategoriId&limit=5&skip=0';
+        print('🌐 Menggunakan API Payuniovo dengan kategori: $apiEndpoint');
       } else {
-        // API Seepays
-        apiEndpoint = '$apiUrl/trx/list?page=0&limit=50';
-        print('🌐 Menggunakan API Seepays: $apiEndpoint');
+        // API Seepays - gunakan kategori ID jika tersedia
+        if (kategoriId.isNotEmpty) {
+          apiEndpoint = '$apiUrl/trx/list?page=0&limit=50&kategori_id=$kategoriId';
+          print('🌐 Menggunakan API Seepays dengan kategori: $apiEndpoint');
+        } else {
+          apiEndpoint = '$apiUrl/trx/list?page=0&limit=50';
+          print('🌐 Menggunakan API Seepays tanpa kategori: $apiEndpoint');
+        }
       }
 
       print('📡 Calling API...');

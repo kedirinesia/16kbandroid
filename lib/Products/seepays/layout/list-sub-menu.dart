@@ -1,17 +1,15 @@
 // @dart=2.9
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:mobile/bloc/Bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mobile/bloc/ConfigApp.dart';
 import 'package:mobile/bloc/TemplateConfig.dart';
+import 'package:mobile/config.dart';
 import 'package:mobile/models/menu.dart';
-import 'package:mobile/provider/analitycs.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:mobile/Products/seepays/layout/list-sub-menu-controller.dart';
 
-import 'list-sub-menu-controller.dart';
-
+// ignore: must_be_immutable
 class ListSubMenu extends StatefulWidget {
   final MenuModel menuModel;
 
@@ -22,26 +20,6 @@ class ListSubMenu extends StatefulWidget {
 }
 
 class _ListSubMenuState extends ListSubMenuController {
-  String packageName = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _getPackageName();
-    analitycs.pageView('/list/submenu', {
-      'userId': bloc.userId.valueWrapper?.value,
-      'title': 'List Sub Menu',
-    });
-  }
-
-  Future<void> _getPackageName() async {
-    final info = await PackageInfo.fromPlatform();
-    setState(() {
-      packageName = info.packageName;
-    });
-    print("DEBUG: packageName -> $packageName"); // 👈 debug print
-  }
-
   @override
   Widget build(BuildContext context) {
     List<String> pkgName = [
@@ -127,12 +105,11 @@ class _ListSubMenuState extends ListSubMenuController {
                             decoration: InputDecoration(
                                 enabledBorder: OutlineInputBorder(
                                     borderSide: BorderSide(
-                                        color: Theme.of(context)
-                                            .secondaryHeaderColor)),
+                                        color: Colors.grey.shade300)),
                                 focusedBorder: OutlineInputBorder(
                                     borderSide: BorderSide(
                                         color: Theme.of(context)
-                                            .secondaryHeaderColor)),
+                                            .primaryColor)),
                                 hintText: 'Cari disini...',
                                 isDense: true,
                                 suffixIcon: InkWell(
@@ -184,76 +161,95 @@ class _ListSubMenuState extends ListSubMenuController {
                               size: 35,
                             ),
                           )
-                        : ListView.separated(
-                            padding: EdgeInsets.all(20),
-                            itemCount: listMenu.length,
-                            separatorBuilder: (_, i) => SizedBox(height: 10),
-                            itemBuilder: (ctx, i) {
-                              MenuModel menu = listMenu[i];
-                              return InkWell(
-                                onTap: () => onTapMenu(menu),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(10.0),
-                                      boxShadow: [
-                                        BoxShadow(
-                                            color: Colors.black.withOpacity(.1),
-                                            offset: Offset(5, 10.0),
-                                            blurRadius: 20)
-                                      ]),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      foregroundColor:
-                                          packageName == 'com.lariz.mobile'
-                                              ? Theme.of(context)
-                                                  .secondaryHeaderColor
-                                              : Theme.of(context).primaryColor,
-                                      backgroundColor:
-                                          packageName == 'com.lariz.mobile'
-                                              ? Theme.of(context)
-                                                  .secondaryHeaderColor
-                                                  .withOpacity(.1)
-                                              : Theme.of(context)
-                                                  .primaryColor
-                                                  .withOpacity(.1),
-                                      child: menu.icon != ''
-                                          ? Container(
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              padding: EdgeInsets.all(10),
-                                              child: CachedNetworkImage(
-                                                imageUrl: menu.icon,
-                                              ),
-                                            )
-                                          : Container(
-                                              width: double.infinity,
-                                              height: double.infinity,
-                                              padding: EdgeInsets.all(10),
-                                              child: CachedNetworkImage(
-                                                imageUrl: currentMenu.icon,
-                                              ),
-                                            ),
-                                    ),
-                                    title: Text(
-                                      menu.name,
-                                      style: TextStyle(
-                                        fontSize: 12.0,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      menu.description ?? ' ',
-                                      style: TextStyle(
-                                        fontSize: 10.0,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
+                        : RefreshIndicator(
+                            onRefresh: () async {
+                              try {
+                                // Refresh menu data
+                                await getData();
+                                
+                                // Add a small delay to show refresh animation
+                                await Future.delayed(Duration(milliseconds: 500));
+                                
+                              } catch (e) {
+                                print('Error during refresh: $e');
+                              }
                             },
+                            color: packageName == 'com.lariz.mobile'
+                                ? Theme.of(context).secondaryHeaderColor
+                                : Theme.of(context).primaryColor,
+                            backgroundColor: Colors.white,
+                            strokeWidth: 3.0,
+                            child: ListView.separated(
+                                padding: EdgeInsets.all(20),
+                                itemCount: listMenu.length,
+                                separatorBuilder: (_, i) => SizedBox(height: 10),
+                                itemBuilder: (ctx, i) {
+                                  MenuModel menu = listMenu[i];
+                                  return InkWell(
+                                    onTap: () => onTapMenu(menu),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(10.0),
+                                          boxShadow: [
+                                            BoxShadow(
+                                                color: Colors.black.withOpacity(.1),
+                                                offset: Offset(5, 10.0),
+                                                blurRadius: 20)
+                                          ]),
+                                      child: ListTile(
+                                        leading: CircleAvatar(
+                                          foregroundColor:
+                                              packageName == 'com.lariz.mobile'
+                                                  ? Theme.of(context)
+                                                      .secondaryHeaderColor
+                                                  : Theme.of(context).primaryColor,
+                                          backgroundColor:
+                                              packageName == 'com.lariz.mobile'
+                                                  ? Theme.of(context)
+                                                      .secondaryHeaderColor
+                                                      .withOpacity(.1)
+                                                  : Theme.of(context)
+                                                      .primaryColor
+                                                      .withOpacity(.1),
+                                          child: menu.icon != ''
+                                              ? Container(
+                                                  width: double.infinity,
+                                                  height: double.infinity,
+                                                  padding: EdgeInsets.all(10),
+                                                  child: CachedNetworkImage(
+                                                    imageUrl: menu.icon,
+                                                  ),
+                                                )
+                                              : Container(
+                                                  width: double.infinity,
+                                                  height: double.infinity,
+                                                  padding: EdgeInsets.all(10),
+                                                  child: CachedNetworkImage(
+                                                    imageUrl: currentMenu.icon,
+                                                  ),
+                                                ),
+                                        ),
+                                        title: Text(
+                                          menu.name,
+                                          style: TextStyle(
+                                            fontSize: 12.0,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          menu.description ?? ' ',
+                                          style: TextStyle(
+                                            fontSize: 10.0,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                           ),
                   )
                 ],
