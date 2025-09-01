@@ -372,9 +372,15 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
 
     print('[DEBUG]  : Final fields object: $fields');
 
-    // Check for empty fields
+    // Check for empty fields (excluding optional fields)
     print('[DEBUG]  : Checking for empty fields...');
     for (String fieldName in fields.keys) {
+      // Skip validation for optional fields
+      if (fieldName == 'no_npwp') {
+        print('[DEBUG] Payuniovo: ✅ Skipping validation for optional field: $fieldName');
+        continue;
+      }
+      
       if (fields[fieldName]!.isEmpty) {
         print('[DEBUG]   ❌ Empty field found: $fieldName');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -388,7 +394,7 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
         print('[DEBUG] Payuniovo: ✅ Field $fieldName is filled: "${fields[fieldName]}"');
       }
     }
-    print('[DEBUG] Payuniovo: ✅ All fields are filled');
+    print('[DEBUG] Payuniovo: ✅ All required fields are filled');
     
     // Validate foto usaha
     if (_fotoUsaha == null) {
@@ -571,9 +577,7 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
                         hintText: 'No NPWP (Opsional)',
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'No NPWP harus diisi';
-                        }
+                        // NPWP is optional, so no validation needed
                         return null;
                       },
                     ),
@@ -910,7 +914,7 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'UMI dengan penjualan 500rb ke bawah free Admin',
+                              'UMI ( Scan Qris static di bawah 500K Free Admin )',
                               style: TextStyle(
                                 color: Colors.green,
                                 fontSize: 12,
