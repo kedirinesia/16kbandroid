@@ -21,19 +21,47 @@ abstract class TopupController extends State<TopupPage> {
   @override
   void initState() {
     super.initState();
-    analitycs.pageView('/topup/controller/', {
+    print('🔍 [TOPUP] initState called');
+    print('🔍 [TOPUP] User ID: ${bloc.userId.valueWrapper?.value}');
+    
+    var analyticsData = {
       'userId': bloc.userId.valueWrapper?.value,
       'title': 'Topup Controller',
-    });
+    };
+    print('🔍 [TOPUP] Analytics payload: ${analyticsData.toString()}');
+    analitycs.pageView('/topup/controller/', analyticsData);
+    print('🔍 [TOPUP] Analytics page view sent');
+    
     fetchData();
   }
 
   fetchData() async {
+    print('🔍 [TOPUP] fetchData() called');
+    print('🔍 [TOPUP] Loading payment methods from API');
+    
     try {
+      print('🔍 [TOPUP] Making API call to /deposit/methode');
       List<dynamic> datas = await api.get('/deposit/methode', cache: false);
-      listPayment = datas.map((e) => PaymentModel.fromJson(e)).toList();
+      print('🔍 [TOPUP] API response received');
+      print('🔍 [TOPUP] Raw API response data: ${datas.toString()}');
+      print('🔍 [TOPUP] Number of payment methods received: ${datas.length}');
+      
+      listPayment = datas.map((e) {
+        print('🔍 [TOPUP] Processing payment method: ${e.toString()}');
+        return PaymentModel.fromJson(e);
+      }).toList();
+      
+      print('🔍 [TOPUP] Payment methods processed: ${listPayment.length}');
+      print('🔍 [TOPUP] Payment methods details:');
+      listPayment.forEach((payment) {
+        print('🔍 [TOPUP] - ID: ${payment.id}, Title: ${payment.title}, Type: ${payment.type}, Channel: ${payment.channel}');
+      });
 
+      print('🔍 [TOPUP] Checking QRIS static configuration');
+      print('🔍 [TOPUP] QRIS static enabled: ${configAppBloc.qrisStaticOnTopup.valueWrapper?.value ?? false}');
+      
       if (configAppBloc.qrisStaticOnTopup.valueWrapper?.value ?? false) {
+        print('🔍 [TOPUP] Adding QRIS static payment method');
         PaymentModel qrisStatic = PaymentModel(
           id: '',
           title: 'QRIS',
@@ -49,33 +77,52 @@ abstract class TopupController extends State<TopupPage> {
         );
 
         listPayment.add(qrisStatic);
+        print('🔍 [TOPUP] QRIS static added, total methods: ${listPayment.length}');
       }
     } catch (e) {
+      print('🔍 [TOPUP] Error fetching payment methods: $e');
       listPayment = [];
     } finally {
+      print('🔍 [TOPUP] Setting loading to false');
       setState(() {
         loading = false;
       });
+      print('🔍 [TOPUP] State updated, loading completed');
     }
   }
 
   onTapMenu(PaymentModel payment) {
+    print('🔍 [TOPUP] onTapMenu called');
+    print('🔍 [TOPUP] Selected payment method:');
+    print('🔍 [TOPUP] - ID: ${payment.id}');
+    print('🔍 [TOPUP] - Title: ${payment.title}');
+    print('🔍 [TOPUP] - Type: ${payment.type}');
+    print('🔍 [TOPUP] - Channel: ${payment.channel}');
+    print('🔍 [TOPUP] - Description: ${payment.description}');
+    print('🔍 [TOPUP] - Admin: ${payment.admin}');
+    
     if (payment.type == 1 || payment.type == 2) {
+      print('🔍 [TOPUP] Navigating to TopupBank (Bank/E-wallet transfer)');
       return Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => TopupBank(payment)));
     } else if (payment.type == 5) {
+      print('🔍 [TOPUP] Navigating to TopupVA (Virtual Account)');
       return Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => TopupVA()));
     } else if (payment.type == 4 || payment.type == 6) {
+      print('🔍 [TOPUP] Navigating to TopupMerchant (Merchant/Agen)');
       return Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => TopupMerchant(payment)));
     } else if (payment.type == 7) {
+      print('🔍 [TOPUP] Navigating to TopupChannel (Channel)');
       return Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => TopupChannel(payment)));
     } else if (payment.type == 8) {
+      print('🔍 [TOPUP] Navigating to QrisTopup (QRIS)');
       return Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => QrisTopup()));
     } else if (payment.type == 9) {
+      print('🔍 [TOPUP] Navigating to QRIS Static page');
       return Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) =>
@@ -83,6 +130,8 @@ abstract class TopupController extends State<TopupPage> {
               MyQrisPage(),
         ),
       );
+    } else {
+      print('🔍 [TOPUP] Unknown payment type: ${payment.type}, no navigation');
     }
   }
 }

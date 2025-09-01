@@ -18,52 +18,122 @@ abstract class VAController extends State<TopupVA> {
   @override
   void initState() {
     super.initState();
+    print('🔍 [TOPUP VA CTRL] initState called');
   }
 
   Future<List<VirtualAccount>> getVa() async {
+    print('🔍 [TOPUP VA CTRL] getVa() called');
+    
+    var requestUrl = '$apiUrl/deposit/virtual-account/list';
+    var requestHeaders = {'Authorization': bloc.token.valueWrapper?.value};
+    
+    print('🔍 [TOPUP VA CTRL] FULL API REQUEST DETAILS:');
+    print('🔍 [TOPUP VA CTRL] URL: $requestUrl');
+    print('🔍 [TOPUP VA CTRL] Headers: ${requestHeaders.toString()}');
+    
     http.Response response = await http.get(
-        Uri.parse('$apiUrl/deposit/virtual-account/list'),
-        headers: {'Authorization': bloc.token.valueWrapper?.value});
+        Uri.parse(requestUrl),
+        headers: requestHeaders);
 
+    print('🔍 [TOPUP VA CTRL] API response status: ${response.statusCode}');
+    print('🔍 [TOPUP VA CTRL] FULL API RESPONSE PAYLOAD:');
+    print('🔍 [TOPUP VA CTRL] ${response.body}');
+    
     if (response.statusCode == 200) {
-      List<dynamic> datas = json.decode(response.body)['data'];
-      return datas.map((el) => VirtualAccount.fromJson(el)).toList();
+      print('🔍 [TOPUP VA CTRL] API request successful');
+      var responseData = json.decode(response.body);
+      print('🔍 [TOPUP VA CTRL] FULL PARSED RESPONSE DATA:');
+      print('🔍 [TOPUP VA CTRL] ${responseData.toString()}');
+      
+      List<dynamic> datas = responseData['data'];
+      print('🔍 [TOPUP VA CTRL] Number of VA options: ${datas.length}');
+      
+      var vaList = datas.map((el) {
+        print('🔍 [TOPUP VA CTRL] Processing VA: ${el.toString()}');
+        return VirtualAccount.fromJson(el);
+      }).toList();
+      
+      print('🔍 [TOPUP VA CTRL] VA list created with ${vaList.length} items');
+      return vaList;
     } else {
+      print('🔍 [TOPUP VA CTRL] API request failed');
       return [];
     }
   }
 
   void topup(VirtualAccount va) async {
+    print('🔍 [TOPUP VA CTRL] topup() called');
+    print('🔍 [TOPUP VA CTRL] Selected VA: ${va.toString()}');
+    print('🔍 [TOPUP VA CTRL] Raw nominal text: ${nominal.text}');
+    
     double parsedNominal = double.parse(nominal.text.replaceAll('.', ''));
+    print('🔍 [TOPUP VA CTRL] Parsed nominal: $parsedNominal');
+    
     if (nominal.text.isEmpty) {
+      print('🔍 [TOPUP VA CTRL] Validation failed: nominal empty');
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Nominal belum diisi')));
       return;
     } else if (parsedNominal < 10000) {
+      print('🔍 [TOPUP VA CTRL] Validation failed: nominal < 10000');
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Minimal deposit adalah Rp 10.000')));
       return;
     }
+    
+    print('🔍 [TOPUP VA CTRL] Validation passed');
 
+    print('🔍 [TOPUP VA CTRL] Setting loading to true');
     setState(() {
       loading = true;
     });
+    
     try {
+      var requestUrl = '$apiUrl/deposit/payment-va';
+      var requestHeaders = {
+        'Authorization': bloc.token.valueWrapper?.value,
+        'Content-Type': 'application/json'
+      };
+      var requestBody = {'nominal': parsedNominal, 'vacode': va.code};
+      
+      print('🔍 [TOPUP VA CTRL] FULL API REQUEST DETAILS:');
+      print('🔍 [TOPUP VA CTRL] URL: $requestUrl');
+      print('🔍 [TOPUP VA CTRL] Headers: ${requestHeaders.toString()}');
+      print('🔍 [TOPUP VA CTRL] Body: ${requestBody.toString()}');
+      print('🔍 [TOPUP VA CTRL] Body JSON: ${json.encode(requestBody)}');
+      
       http.Response response =
-          await http.post(Uri.parse('$apiUrl/deposit/payment-va'),
-              headers: {
-                'Authorization': bloc.token.valueWrapper?.value,
-                'Content-Type': 'application/json'
-              },
-              body: json.encode({'nominal': parsedNominal, 'vacode': va.code}));
+          await http.post(Uri.parse(requestUrl),
+              headers: requestHeaders,
+              body: json.encode(requestBody));
 
+      print('🔍 [TOPUP VA CTRL] API response status: ${response.statusCode}');
+      print('🔍 [TOPUP VA CTRL] FULL API RESPONSE PAYLOAD:');
+      print('🔍 [TOPUP VA CTRL] ${response.body}');
+      
       if (response.statusCode == 200) {
-        Map<String, dynamic> data = json.decode(response.body)['data'];
+        print('🔍 [TOPUP VA CTRL] API request successful');
+        var responseData = json.decode(response.body);
+        print('🔍 [TOPUP VA CTRL] FULL PARSED RESPONSE DATA:');
+        print('🔍 [TOPUP VA CTRL] ${responseData.toString()}');
+        
+        Map<String, dynamic> data = responseData['data'];
+        print('🔍 [TOPUP VA CTRL] VA response data: ${data.toString()}');
+        
         VirtualAccountResponse va = VirtualAccountResponse.fromJson(data);
+        print('🔍 [TOPUP VA CTRL] VA response object created');
+        print('🔍 [TOPUP VA CTRL] Navigating to DepositVa page');
+        
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => DepositVa(va)));
       } else {
-        String message = json.decode(response.body)['message'];
+        print('🔍 [TOPUP VA CTRL] API request failed');
+        var errorData = json.decode(response.body);
+        print('🔍 [TOPUP VA CTRL] Error response: ${errorData.toString()}');
+        
+        String message = errorData['message'];
+        print('🔍 [TOPUP VA CTRL] Error message: $message');
+        
         showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -83,6 +153,7 @@ abstract class VAController extends State<TopupVA> {
                     ]));
       }
     } catch (err) {
+      print('🔍 [TOPUP VA CTRL] Exception occurred: $err');
       showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -101,9 +172,11 @@ abstract class VAController extends State<TopupVA> {
                         onPressed: () => Navigator.of(ctx).pop())
                   ]));
     } finally {
+      print('🔍 [TOPUP VA CTRL] Setting loading to false');
       setState(() {
         loading = false;
       });
+      print('🔍 [TOPUP VA CTRL] State updated');
     }
   }
 }

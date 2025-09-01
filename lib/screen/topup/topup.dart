@@ -18,14 +18,24 @@ class _TopupPageState extends TopupController with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    analitycs.pageView('/topup/', {
+    print('🔍 [TOPUP PAGE] initState called');
+    print('🔍 [TOPUP PAGE] User ID: ${bloc.userId.valueWrapper?.value}');
+    
+    var analyticsData = {
       'userId': bloc.userId.valueWrapper?.value,
       'title': 'Topup',
-    });
+    };
+    print('🔍 [TOPUP PAGE] Analytics payload: ${analyticsData.toString()}');
+    analitycs.pageView('/topup/', analyticsData);
+    print('🔍 [TOPUP PAGE] Analytics page view sent');
   }
 
   @override
   Widget build(BuildContext context) {
+    print('🔍 [TOPUP PAGE] build() called');
+    print('🔍 [TOPUP PAGE] Loading state: $loading');
+    print('🔍 [TOPUP PAGE] Number of payment methods: ${listPayment.length}');
+    
     final spinkit = SpinKitThreeBounce(
       color: Theme.of(context).primaryColor,
       size: 50.0,
@@ -45,9 +55,15 @@ class _TopupPageState extends TopupController with TickerProviderStateMixin {
                     physics: ScrollPhysics(),
                     itemBuilder: (_, int index) {
                       PaymentModel mm = listPayment[index];
+                      print('🔍 [TOPUP PAGE] Building payment method item at index: $index');
+                      print('🔍 [TOPUP PAGE] Payment method: ${mm.title} (Type: ${mm.type})');
 
                       return InkWell(
-                        onTap: () => onTapMenu(mm),
+                        onTap: () {
+                          print('🔍 [TOPUP PAGE] Payment method tapped at index: $index');
+                          print('🔍 [TOPUP PAGE] Selected: ${mm.title} (Type: ${mm.type})');
+                          onTapMenu(mm);
+                        },
                         child: Container(
                           margin: EdgeInsets.only(
                               bottom: 20.0, left: 10.0, right: 10.0),
@@ -72,6 +88,14 @@ class _TopupPageState extends TopupController with TickerProviderStateMixin {
                                       child: CachedNetworkImage(
                                         imageUrl: mm.icon,
                                         width: 40.0,
+                                        placeholder: (context, url) {
+                                          print('🔍 [TOPUP PAGE] Loading image placeholder for: $url');
+                                          return CircularProgressIndicator();
+                                        },
+                                        errorWidget: (context, url, error) {
+                                          print('🔍 [TOPUP PAGE] Image error for: $url - $error');
+                                          return Icon(Icons.error);
+                                        },
                                       ))
                                   : Icon(Icons.list),
                             ),

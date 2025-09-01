@@ -13,7 +13,7 @@ class Bloc extends Object {
   final userPhone = BehaviorSubject<String>();
   final username = BehaviorSubject<String>();
   final namaToko = BehaviorSubject<String>();
-  final alamat = BehaviorSubject<String>();
+  final alamat = BehaviorSubject<String>(); 
   final kodeReseller = BehaviorSubject<String>();
   final token = BehaviorSubject<String>();
   final saldo = BehaviorSubject<int>();

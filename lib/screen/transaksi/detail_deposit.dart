@@ -20,32 +20,47 @@ class DetailDeposit extends StatefulWidget {
 
 class _DetailDepositState extends DetailDepositController {
   Widget fab() {
+    print('🔍 [DETAIL DEPOSIT] fab() called');
+    print('🔍 [DETAIL DEPOSIT] Deposit status: ${widget.dep.statusModel.status}');
+    print('🔍 [DETAIL DEPOSIT] Deposit type: ${widget.dep.type}');
+    print('🔍 [DETAIL DEPOSIT] VA name: ${widget.dep.vaname}');
+    
     if (widget.dep.statusModel.status == 0 &&
         (widget.dep.type == 1 || widget.dep.type == 2)) {
+      print('🔍 [DETAIL DEPOSIT] Showing "Bayar Sekarang" FAB');
       return FloatingActionButton.extended(
         backgroundColor: Theme.of(context).primaryColor,
         icon: Icon(Icons.navigate_next),
         label: Text('Bayar Sekarang'),
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) =>
-                TransferDepositPage(widget.dep.nominal, widget.dep.type))),
+        onPressed: () {
+          print('🔍 [DETAIL DEPOSIT] "Bayar Sekarang" button pressed');
+          print('🔍 [DETAIL DEPOSIT] Navigating to TransferDepositPage with nominal: ${widget.dep.nominal}, type: ${widget.dep.type}');
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) =>
+                  TransferDepositPage(widget.dep.nominal, widget.dep.type)));
+        },
       );
     } else if (widget.dep.statusModel.status == 0 &&
         (widget.dep.type == 5 ||
             widget.dep.vaname == 'alfamart' ||
             widget.dep.vaname == 'indomaret')) {
+      print('🔍 [DETAIL DEPOSIT] Showing "Salin Kode Pembayaran" FAB');
       return FloatingActionButton.extended(
         backgroundColor: Theme.of(context).primaryColor,
         label: Text('Salin Kode Pembayaran'),
         icon: Icon(Icons.content_copy),
         onPressed: () async {
+          print('🔍 [DETAIL DEPOSIT] "Salin Kode Pembayaran" button pressed');
+          print('🔍 [DETAIL DEPOSIT] Payment code: ${widget.dep.kodePembayaran}');
           await Clipboard.setData(
               ClipboardData(text: widget.dep.kodePembayaran));
+          print('🔍 [DETAIL DEPOSIT] Payment code copied to clipboard');
           ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("Kode pembayaran berhasil disalin")));
         },
       );
     } else {
+      print('🔍 [DETAIL DEPOSIT] No FAB needed for this deposit state');
       return null;
     }
   }
@@ -53,13 +68,25 @@ class _DetailDepositState extends DetailDepositController {
   @override
   void initState() {
     super.initState();
-    analitycs.pageView('/deposit/detail/' + widget.dep.id, {
+    print('🔍 [DETAIL DEPOSIT] initState called');
+    print('🔍 [DETAIL DEPOSIT] Deposit ID: ${widget.dep.id}');
+    print('🔍 [DETAIL DEPOSIT] Deposit nominal: ${widget.dep.nominal}');
+    print('🔍 [DETAIL DEPOSIT] Deposit status: ${widget.dep.statusModel.statusText}');
+    print('🔍 [DETAIL DEPOSIT] User ID: ${bloc.userId.valueWrapper?.value}');
+    
+    var analyticsData = {
       'userId': bloc.userId.valueWrapper?.value,
       'title': 'Detail Deposit',
-    });
+    };
+    print('🔍 [DETAIL DEPOSIT] Analytics payload: ${analyticsData.toString()}');
+    analitycs.pageView('/deposit/detail/' + widget.dep.id, analyticsData);
+    print('🔍 [DETAIL DEPOSIT] Analytics page view sent');
   }
 
   Widget build(BuildContext context) {
+    print('🔍 [DETAIL DEPOSIT] build() called');
+    print('🔍 [DETAIL DEPOSIT] Building detail deposit UI for deposit: ${widget.dep.id}');
+    
     return Scaffold(
         appBar: AppBar(
           title: Text('Detail Deposit'),
@@ -68,14 +95,18 @@ class _DetailDepositState extends DetailDepositController {
           actions: [
             IconButton(
               icon: Icon(Icons.home_rounded),
-              onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        configAppBloc.layoutApp?.valueWrapper?.value['home'] ??
-                        templateConfig[
-                            configAppBloc.templateCode.valueWrapper?.value],
-                  ),
-                  (route) => false),
+              onPressed: () {
+                print('🔍 [DETAIL DEPOSIT] Home button pressed');
+                print('🔍 [DETAIL DEPOSIT] Navigating to home page');
+                Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          configAppBloc.layoutApp?.valueWrapper?.value['home'] ??
+                          templateConfig[
+                              configAppBloc.templateCode.valueWrapper?.value],
+                    ),
+                    (route) => false);
+              },
             ),
           ],
         ),
