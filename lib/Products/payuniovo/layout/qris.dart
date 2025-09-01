@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:esys_flutter_share/esys_flutter_share.dart';
 import 'package:http/http.dart' as http;
+import 'package:mobile/modules.dart';
 
 // Import untuk KYC pages
 import 'package:mobile/screen/kyc/waiting.dart';
@@ -95,6 +96,9 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
   
   String? _selectedPendapatan;
   String? _selectedTokoFisik;
+  
+  // Variable untuk foto usaha
+  File? _fotoUsaha;
 
   @override
   void initState() {
@@ -186,9 +190,15 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
             final existingPendapatan = submissionData['pendapatan_per_tahun'];
             if (existingPendapatan != null && _pendapatanOptions.contains(existingPendapatan)) {
               _selectedPendapatan = existingPendapatan;
-            } else {
-              _selectedPendapatan = null;
+            } else if (existingPendapatan != null && existingPendapatan.contains('UMI - Penjualan/Tahun < 300 Juta')) {
+              // Handle case where API returns UMI without "( Default)" suffix
+              if (_pendapatanOptions.contains('UMI - Penjualan/Tahun < 300 Juta ( Default)')) {
+                _selectedPendapatan = 'UMI - Penjualan/Tahun < 300 Juta ( Default)';
+              } else if (_pendapatanOptions.contains('UMI - Penjualan/Tahun < 300 Juta')) {
+                _selectedPendapatan = 'UMI - Penjualan/Tahun < 300 Juta';
+              }
             }
+            // If no existing data, keep the default UMI value that was set in _loadPendapatanOptions
             
             // Handle toko fisik dropdown value
             final existingTokoFisik = submissionData['toko_fisik'];
@@ -249,6 +259,12 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
           List<dynamic> pendapatanList = data['data'];
           setState(() {
             _pendapatanOptions = pendapatanList.cast<String>();
+            // Set default value to UMI if available
+            if (_pendapatanOptions.contains('UMI - Penjualan/Tahun < 300 Juta ( Default)')) {
+              _selectedPendapatan = 'UMI - Penjualan/Tahun < 300 Juta ( Default)';
+            } else if (_pendapatanOptions.contains('UMI - Penjualan/Tahun < 300 Juta')) {
+              _selectedPendapatan = 'UMI - Penjualan/Tahun < 300 Juta';
+            }
           });
           print('[DEBUG] Payuniovo: Loaded ${_pendapatanOptions.length} pendapatan options');
         } else {
@@ -262,14 +278,36 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
       // Fallback to default options if API fails
       setState(() {
         _pendapatanOptions = [
-          'UMI - Penjualan/Tahun < 300 Juta',
+          'UMI - Penjualan/Tahun < 300 Juta ( Default)',
           'UKE - Penjualan/Tahun > 300 Juta - 2,5 Milyar',
           'UME - Penjualan/Tahun > 2,5 Milyar - 50 Milyar',
           'UBE - Penjualan/Tahun > 50Milyar',
           'URE - Penjualan/Tahun Donasi, Sosial, Non Profit & dll',
           'PSO - Penjualan/Tahun Pelayanan Pemerintahan dll'
         ];
+        // Set default value to UMI
+        _selectedPendapatan = 'UMI - Penjualan/Tahun < 300 Juta ( Default)';
       });
+    }
+  }
+  
+  // Method untuk mengambil foto usaha
+  Future<void> _getFotoUsaha() async {
+    try {
+      File image = await getPhoto();
+      if (image != null) {
+        setState(() {
+          _fotoUsaha = image;
+        });
+      }
+    } catch (e) {
+      print('[DEBUG] Payuniovo: Error taking foto usaha: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mengambil foto. Silakan coba lagi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -351,6 +389,19 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
       }
     }
     print('[DEBUG] Payuniovo: ✅ All fields are filled');
+    
+    // Validate foto usaha
+    if (_fotoUsaha == null) {
+      print('[DEBUG] Payuniovo: ❌ Foto usaha is required');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto usaha wajib diisi'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    print('[DEBUG] Payuniovo: ✅ Foto usaha is provided');
 
     setState(() {
       _isLoading = true;
@@ -360,22 +411,30 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
       final token = bloc.token.valueWrapper?.value;
       final url = Uri.parse('https://payuni-app.findig.id/api/v1/qris/submission/update');
       
-      final formData = fields;
-
       print('[DEBUG] Payuniovo: ===== SENDING REQUEST =====');
       print('[DEBUG] Payuniovo: URL: $url');
       print('[DEBUG] Payuniovo: Token: ${token != null ? "Available" : "Not available"}');
-      print('[DEBUG] Payuniovo: Request headers: {"Authorization": "${token != null ? "Bearer ***" : "None"}", "Content-Type": "application/json"}');
-      print('[DEBUG] Payuniovo: Request body (JSON): ${json.encode(formData)}');
+      
+      // Create MultipartRequest for file upload
+      http.MultipartRequest request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = token ?? '';
+      
+      // Add form fields
+      request.fields.addAll(fields);
+      
+      // Add foto usaha if available
+      if (_fotoUsaha != null) {
+        print('[DEBUG] Payuniovo: Adding foto usaha to request');
+        request.files.add(await http.MultipartFile.fromPath('foto_usaha', _fotoUsaha!.path));
+      } else {
+        print('[DEBUG] Payuniovo: No foto usaha provided');
+      }
+      
+      print('[DEBUG] Payuniovo: Request fields: ${request.fields}');
+      print('[DEBUG] Payuniovo: Request files: ${request.files.map((f) => f.field).toList()}');
 
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': token ?? '',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(formData),
-      );
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       print('[DEBUG] Payuniovo: ===== RESPONSE RECEIVED =====');
       print('[DEBUG] Payuniovo: Response status code: ${response.statusCode}');
@@ -507,8 +566,9 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
                     TextFormField(
                       controller: _noNpwpController,
                       decoration: InputDecoration(
-                        labelText: 'No NPWP *',
+                        labelText: 'No NPWP (Opsional)',
                         border: OutlineInputBorder(),
+                        hintText: 'No NPWP (Opsional)',
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -811,7 +871,11 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
                       items: _pendapatanOptions.map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
-                          child: Text(value),
+                          child: Text(
+                            value.contains('UMI - Penjualan/Tahun < 300 Juta') 
+                                ? '$value (Default)'
+                                : value,
+                          ),
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
@@ -826,6 +890,98 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
                         return null;
                       },
                     ),
+                    SizedBox(height: 8),
+                    
+                    // Keterangan UMI
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        border: Border.all(color: Colors.blue.shade200),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.blue.shade600,
+                            size: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'UMI dengan penjualan 500rb ke bawah free Admin',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    
+                    // Foto Usaha
+                    Text(
+                      'Foto Usaha *',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    InkWell(
+                      onTap: _getFotoUsaha,
+                      child: Container(
+                        width: double.infinity,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _fotoUsaha != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  _fotoUsaha!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: 200,
+                                ),
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.camera_alt,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Tap untuk mengambil foto usaha',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                    if (_fotoUsaha == null)
+                      Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Foto usaha wajib diisi',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     SizedBox(height: 32),
                     
                     // Submit Button
@@ -1203,9 +1359,19 @@ class _MyQrisPageState extends State<MyQrisPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SpinKitFadingCircle(
-              color: Theme.of(context).primaryColor,
-              size: 48,
+            CachedNetworkImage(
+              imageUrl: 'http://static.vecteezy.com/system/resources/thumbnails/022/892/180/small_2x/work-process-3d-rendering-transparent-backgorund-design-and-development-png.png',
+              width: 120,
+              height: 120,
+              placeholder: (context, url) => SpinKitFadingCircle(
+                color: Theme.of(context).primaryColor,
+                size: 48,
+              ),
+              errorWidget: (context, url, error) => Icon(
+                Icons.work,
+                size: 48,
+                color: Theme.of(context).primaryColor,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -1226,19 +1392,21 @@ class _MyQrisPageState extends State<MyQrisPage> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  setState(() {
-                    // Refresh the page
-                  });
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => NavbarHome()),
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey,
+                  backgroundColor: Colors.green,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 child: Text(
-                  "Refresh",
+                  "Kembali ke HOME",
                   style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
