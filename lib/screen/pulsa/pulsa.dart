@@ -87,34 +87,42 @@ class _PulsaState extends PulsaController {
       {
         'name': 'indosat',
         'prefix': '0814, 0815, 0816, 0855, 0856, 0857, 0858',
-        'url': 'https://ayoba.co.id/dokumen/provider/indosat.png',
+        'url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Indosat_Ooredoo.svg/2560px-Indosat_Ooredoo.svg.png',
       },
       {
         'name': 'telkomsel',
-        'prefix': '0811, 0812, 0813, 0821, 0822, 0823, 0852, 0853, 0851',
-        'url': 'https://ayoba.co.id/dokumen/provider/tsel.png',
+        'prefix': '0811, 0812, 0813, 0821, 0822, 0823, 0852, 0853',
+        'url': 'https://maxsi.id/web/assets/logo-telkomsel-baru.DYhv_uL8_1T5nit.webp',
       },
       {
         'name': 'three',
         'prefix': '0895, 0896, 0897, 0898, 0899',
-        'url': 'https://ayoba.co.id/dokumen/provider/three.png',
+        'url': 'http://bloguna.com/wp-content/uploads/2025/06/Logo-3-Tri-Three-Format-PNG-PDF-AI-SVG-EPS-CDR.webp',
       },
       {
         'name': 'xl',
         'prefix': '0817, 0818, 0819, 0859, 0877, 0878',
-        'url': 'https://ayoba.co.id/dokumen/provider/xl.png',
+        'url': 'https://staticxl.ext.xlaxiata.co.id/s3fs-public/media/images/big-xl-logo.png',
       },
       {
         'name': 'smartfren',
         'prefix': '0881, 0882, 0883, 0884, 0885, 0886, 0887, 0888, 0889',
-        'url': 'https://ayoba.co.id/dokumen/provider/smart.png',
+        'url': 'https://www.logo.wine/a/logo/Smartfren/Smartfren-Logo.wine.svg',
       },
       {
         'name': 'axis',
         'prefix': '0838, 0831, 0832, 0833',
         'url':
             // 'https://i.pinimg.com/originals/d0/31/31/d031314a78e8ac9d4b4ce2593698ee1f.png',
-            'https://ayoba.co.id/dokumen/provider/axis.png',
+            'https://download.logo.wine/logo/Axis_Telecom/Axis_Telecom-Logo.wine.png',
+      },
+
+      {
+        'name': 'byu',
+        'prefix': '085154, 085155, 085156, 085157',
+        'url':
+            // 'https://i.pinimg.com/originals/d0/31/31/d031314a78e8ac9d4b4ce2593698ee1f.png',
+            'https://personale.id/wp-content/uploads/2024/07/2.-By-U.png',
       },
     ];
 

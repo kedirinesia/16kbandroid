@@ -750,8 +750,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
     } else if (phoneNumber.startsWith('0811') || phoneNumber.startsWith('0812') || 
                phoneNumber.startsWith('0813') || phoneNumber.startsWith('0821') || 
                phoneNumber.startsWith('0822') || phoneNumber.startsWith('0823') || 
-               phoneNumber.startsWith('0852') || phoneNumber.startsWith('0853') || 
-               phoneNumber.startsWith('0851')) {
+               phoneNumber.startsWith('0852') || phoneNumber.startsWith('0853')) {
       return 'https://ayoba.co.id/dokumen/provider/tsel.png';
     } else if (phoneNumber.startsWith('0895') || phoneNumber.startsWith('0896') || 
                phoneNumber.startsWith('0897') || phoneNumber.startsWith('0898') || 
@@ -770,6 +769,10 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
     } else if (phoneNumber.startsWith('0838') || phoneNumber.startsWith('0831') || 
                phoneNumber.startsWith('0832') || phoneNumber.startsWith('0833')) {
       return 'https://ayoba.co.id/dokumen/provider/axis.png';
+    } else if (phoneNumber.startsWith('085154') || phoneNumber.startsWith('085155') || 
+               phoneNumber.startsWith('085156') || phoneNumber.startsWith('085157') ||
+               phoneNumber.startsWith('0851')) {
+      return 'https://personale.id/wp-content/uploads/2024/07/2.-By-U.png';
     }
     return '';
   }
@@ -851,7 +854,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       },
       {
         'name': 'telkomsel',
-        'prefix': '0811, 0812, 0813, 0821, 0822, 0823, 0852, 0853, 0851',
+        'prefix': '0811, 0812, 0813, 0821, 0822, 0823, 0852, 0853',
         'url': 'https://maxsi.id/web/assets/logo-telkomsel-baru.DYhv_uL8_1T5nit.webp',
       },
       {
@@ -875,6 +878,14 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
         'url':
             // 'https://i.pinimg.com/originals/d0/31/31/d031314a78e8ac9d4b4ce2593698ee1f.png',
             'https://download.logo.wine/logo/Axis_Telecom/Axis_Telecom-Logo.wine.png',
+      },
+
+      {
+        'name': 'byu',
+        'prefix': '0851',
+        'url':
+            // 'https://i.pinimg.com/originals/d0/31/31/d031314a78e8ac9d4b4ce2593698ee1f.png',
+            'https://personale.id/wp-content/uploads/2024/07/2.-By-U.png',
       },
     ];
 

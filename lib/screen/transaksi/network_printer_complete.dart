@@ -425,19 +425,46 @@ class _NetworkPrinterCompletePageState extends State<NetworkPrinterCompletePage>
       // Use custom receipt data if available (from printPreviewSby)
       if (widget.customReceiptData != null) {
         printData = widget.customReceiptData!;
-        debugPrint('Using custom receipt data from printPreviewSby');
+        debugPrint('✅ Using custom receipt data from printPreviewSby, size: ${printData.length} bytes');
+        
+        if (printData.isEmpty) {
+          debugPrint('❌ Error: Custom receipt data is empty');
+          _showError('Data struk kosong');
+          return;
+        }
       } else {
         // Generate print data using ESC/POS (similar to v1 method in original code)
+        debugPrint('✅ Generating print data for transaction: ${widget.trx.id}');
+        
+        // Validate data first
+        if (widget.trx == null) {
+          debugPrint('❌ Error: Transaction data is null');
+          _showError('Data transaksi tidak tersedia');
+          return;
+        }
+        
+        if (bloc.user.valueWrapper?.value == null) {
+          debugPrint('❌ Error: User data is null');
+          _showError('Data user tidak tersedia');
+          return;
+        }
+        
         final profile = await CapabilityProfile.load();
         final generator = Generator(PaperSize.mm58, profile);
       
         List<int> bytes = [];
         
         // Header
+        String storeName = bloc.user.valueWrapper?.value?.namaToko?.isEmpty == true
+            ? bloc.user.valueWrapper?.value?.nama ?? ''
+            : bloc.user.valueWrapper?.value?.namaToko ?? '';
+            
+        if (storeName.isEmpty) {
+          storeName = 'Toko';
+        }
+        
         bytes += generator.text(
-          bloc.user.valueWrapper?.value?.namaToko?.isEmpty == true
-              ? bloc.user.valueWrapper?.value?.nama ?? ''
-              : bloc.user.valueWrapper?.value?.namaToko ?? '',
+          storeName,
           styles: PosStyles(
             bold: true,
             align: PosAlign.center,

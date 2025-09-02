@@ -133,7 +133,7 @@ class _PrintPreviewState extends PrintPreviewController {
     });
 
     if (dynamicFooterStruk) {
-      if (configAppBloc.info.valueWrapper.value.footerStruk.isNotEmpty) {
+      if (configAppBloc.info.valueWrapper?.value?.footerStruk?.isNotEmpty == true) {
         setState(() {
           footerStruk = configAppBloc.info.valueWrapper.value.footerStruk;
         });
@@ -218,10 +218,21 @@ class _PrintPreviewState extends PrintPreviewController {
     ];
 
     bytes += ticket.emptyLines(1);
+    // Validate user data before access
+    if (bloc.user.valueWrapper?.value == null) {
+      throw Exception('Data user tidak valid');
+    }
+    
+    String printStoreName = bloc.user.valueWrapper.value.namaToko?.isEmpty == true
+        ? bloc.user.valueWrapper.value.nama ?? ''
+        : bloc.user.valueWrapper.value.namaToko ?? '';
+        
+    if (printStoreName.isEmpty) {
+      printStoreName = 'Toko';
+    }
+    
     bytes += ticket.text(
-      bloc.user.valueWrapper.value.namaToko.isEmpty
-          ? bloc.user.valueWrapper.value.nama
-          : bloc.user.valueWrapper.value.namaToko,
+      printStoreName,
       styles: PosStyles(
         width: sizes[i + 1],
         height: sizes[i + 1],
@@ -229,10 +240,13 @@ class _PrintPreviewState extends PrintPreviewController {
         align: PosAlign.center,
       ),
     );
+    
+    String printStoreAddress = bloc.user.valueWrapper.value.alamatToko?.isEmpty == true
+        ? bloc.user.valueWrapper.value.alamat ?? ''
+        : bloc.user.valueWrapper.value.alamatToko ?? '';
+        
     bytes += ticket.text(
-      bloc.user.valueWrapper.value.alamatToko.isEmpty
-          ? bloc.user.valueWrapper.value.alamat
-          : bloc.user.valueWrapper.value.alamatToko,
+      printStoreAddress,
       styles: PosStyles(
         align: PosAlign.center,
         width: sizes[i],
@@ -361,17 +375,31 @@ class _PrintPreviewState extends PrintPreviewController {
 
   Future<void> v2() async {
     await _bluetooth.printNewLine();
+    // Validate user data before access
+    if (bloc.user.valueWrapper?.value == null) {
+      throw Exception('Data user tidak valid');
+    }
+    
+    String v2PrintStoreName = bloc.user.valueWrapper.value.namaToko?.isEmpty == true
+        ? bloc.user.valueWrapper.value.nama ?? ''
+        : bloc.user.valueWrapper.value.namaToko ?? '';
+        
+    if (v2PrintStoreName.isEmpty) {
+      v2PrintStoreName = 'Toko';
+    }
+    
     await _bluetooth.printCustom(
-      bloc.user.valueWrapper.value.namaToko.isEmpty
-          ? bloc.user.valueWrapper.value.nama
-          : bloc.user.valueWrapper.value.namaToko,
+      v2PrintStoreName,
       2,
       1,
     );
+    
+    String v2PrintStoreAddress = bloc.user.valueWrapper.value.alamatToko?.isEmpty == true
+        ? bloc.user.valueWrapper.value.alamat ?? ''
+        : bloc.user.valueWrapper.value.alamatToko ?? '';
+        
     await _bluetooth.printCustom(
-      bloc.user.valueWrapper.value.alamatToko.isEmpty
-          ? bloc.user.valueWrapper.value.alamat
-          : bloc.user.valueWrapper.value.alamatToko,
+      v2PrintStoreAddress,
       0,
       1,
     );
@@ -1236,38 +1264,55 @@ abstract class PrintPreviewController extends State<PrintPreview>
 
   Future<void> ambilDataTerbaru() async {
     print("Fungsi ambilDataTerbaru dipanggil");
-    String productId = widget.trx.produk['_id'];
-    print(productId);
-    http.Response response = await http.get(
-      Uri.parse('$apiUrl/product/member/$productId'),
-      headers: {
-        'Authorization': bloc.token.valueWrapper?.value,
-      },
-    );
+    try {
+      String productId = widget.trx.produk['_id'];
+      print("Product ID: $productId");
+      
+      http.Response response = await http.get(
+        Uri.parse('$apiUrl/product/member/$productId'),
+        headers: {
+          'Authorization': bloc.token.valueWrapper?.value,
+        },
+      );
 
-    if (response.statusCode == 200) {
-      var responseData = json.decode(response.body);
+      print("Response Status: ${response.statusCode}");
       print("Full JSON Response: ${response.body}");
-      int hargaBaru = responseData['data']['harga'];
-      int adminBaru = responseData['data']['admin'];
 
-      if (widget.isPostpaid && hargaBaru <= 0) {
-        hargaBaru = trxData.harga_jual;
+      if (response.statusCode == 200) {
+        var responseData = json.decode(response.body);
+        
+        // Validate response structure
+        if (responseData['data'] is Map && 
+            responseData['data']['harga'] != null && 
+            responseData['data']['admin'] != null) {
+          
+          int hargaBaru = responseData['data']['harga'];
+          int adminBaru = responseData['data']['admin'];
+
+          if (widget.isPostpaid && hargaBaru <= 0) {
+            hargaBaru = trxData.harga_jual;
+          }
+
+          setState(() {
+            harga = hargaBaru;
+            admin = adminBaru;
+            txtHarga.text = hargaBaru.toString();
+            txtAdmin.text = adminBaru.toString();
+            total = harga + admin + cetak;
+          });
+
+          print('✅ Data berhasil diupdate - Harga: $hargaBaru, Admin: $adminBaru');
+        } else {
+          print('⚠️ Response data structure tidak valid: ${responseData['data']}');
+        }
+      } else {
+        print('❌ API Error ${response.statusCode}: ${response.body}');
+        // Don't update data if API fails, keep existing values
       }
-
-      setState(() {
-        harga = hargaBaru;
-        admin = adminBaru;
-
-        txtHarga.text = hargaBaru.toString();
-        txtAdmin.text = adminBaru.toString();
-
-        total = harga + admin + cetak;
-      });
-
-      print('Harga baru: $hargaBaru, Admin baru: $adminBaru');
-    } else {
-      print('Gagal mengambil data terbaru: ${response.body}');
+    } catch (e) {
+      print('❌ Exception in ambilDataTerbaru: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
+      // Don't update data if exception occurs, keep existing values
     }
   }
 }

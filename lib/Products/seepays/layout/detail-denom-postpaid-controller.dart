@@ -67,39 +67,67 @@ abstract class SeepaysDetailDenomPostpaidController extends State<SeepaysDetailD
 
       // Gunakan categoryId dari API jika tersedia, jika tidak gunakan dari widget
       String finalCategoryId = categoryId.isNotEmpty ? categoryId : (widget.menu.category_id ?? '');
-      String apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=$finalCategoryId&limit=10&skip=0';
+      String finalKodeProduk = widget.menu.kodeProduk ?? '';
       
-      if (finalCategoryId.isEmpty) {
-        // Fallback untuk postpaid jika category_id kosong
-        apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=685b71969a3036284f0d8fec&limit=10&skip=0';
-        print('⚠️ Category ID kosong, menggunakan fallback');
+      print('🔍 Final Category ID before check: "$finalCategoryId"');
+      print('🔍 Final Kode Produk before check: "$finalKodeProduk"');
+      
+      // Jika category_id kosong, coba mapping dari kode_produk
+      if ((finalCategoryId.isEmpty || finalCategoryId == 'null') && finalKodeProduk.isNotEmpty) {
+        finalCategoryId = _getCategoryIdFromKodeProduk(finalKodeProduk);
+        print('🔄 Mapped category_id from kode_produk: "$finalCategoryId"');
       }
       
+      if (finalCategoryId.isEmpty || finalCategoryId == 'null') {
+        print('⚠️ Category ID masih kosong setelah mapping, menampilkan pesan "Belum pernah transaksi"');
+        setState(() { 
+          suggestNumbers = ['Belum pernah transaksi di produk ini']; 
+          loadingSuggest = false;
+        });
+        return;
+      }
+      
+      String apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=$finalCategoryId&limit=10&skip=0';
+      print('✅ Using category_id for API call: $finalCategoryId');
+      
       print('🌐 Seepays Postpaid API Endpoint: $apiEndpoint');
-      print('🔍 Final Category ID: $finalCategoryId');
       
-      final response = await http.get(
-        Uri.parse(apiEndpoint),
-        headers: {
-          'Authorization': bloc.token.valueWrapper?.value,
-        },
-      );
+      // Debug: Coba juga test dengan category ID yang berbeda jika yang pertama kosong
+      List<String> testCategoryIds = [
+        finalCategoryId,
+        '5eb704e8c78b531bd8ab3e0c', // Category ID lama
+        '5eb704e9c78b531160ab4160', // PLN Token category ID dari response
+      ];
       
-      print('📡 Response Status: ${response.statusCode}');
-      print('📡 Response Body: ${response.body}');
+      bool foundData = false;
+      
+      for (String testCategoryId in testCategoryIds) {
+        if (foundData) break;
+        
+        String testApiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=$testCategoryId&limit=10&skip=0';
+        print('🧪 Testing API Endpoint: $testApiEndpoint');
+        
+        final response = await http.get(
+          Uri.parse(testApiEndpoint),
+          headers: {
+            'Authorization': bloc.token.valueWrapper?.value,
+          },
+        );
+        
+        print('📡 Response Status: ${response.statusCode}');
+        print('📡 Response Body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        // Response lastTransaction langsung berupa array
-        final List<dynamic> datas = json.decode(response.body) as List<dynamic>;
-        print('📊 Found ${datas.length} transactions in response');
+        if (response.statusCode == 200) {
+          // Response lastTransaction langsung berupa array
+          final List<dynamic> datas = json.decode(response.body) as List<dynamic>;
+          print('📊 Found ${datas.length} transactions in response for category: $testCategoryId');
 
-        if (datas.isEmpty) {
-          print('📭 No transactions found for category: $finalCategoryId');
-          setState(() { 
-            suggestNumbers = ['Belum pernah transaksi di produk ini']; 
-          });
-          return;
-        }
+          if (datas.isEmpty) {
+            print('📭 No transactions found for category: $testCategoryId');
+            continue; // Try next category ID
+          }
+          
+          foundData = true;
 
         // sort terbaru dulu berdasarkan tanggal
         datas.sort((a, b) {
@@ -127,12 +155,19 @@ abstract class SeepaysDetailDenomPostpaidController extends State<SeepaysDetailD
           }
         }
 
-        setState(() { 
-          suggestNumbers = uniqueTargets.toList(); 
-        });
-        print('✅ Final suggest numbers: $suggestNumbers');
-      } else {
-        print('❌ API failed with status: ${response.statusCode}');
+          setState(() { 
+            suggestNumbers = uniqueTargets.toList(); 
+          });
+          print('✅ Final suggest numbers from category $testCategoryId: $suggestNumbers');
+          break; // Exit the loop since we found data
+        } else {
+          print('❌ API failed with status: ${response.statusCode} for category: $testCategoryId');
+        }
+      }
+      
+      // If no data found in any category
+      if (!foundData) {
+        print('❌ No transaction data found in any tested category IDs');
         setState(() { 
           suggestNumbers = ['Belum pernah transaksi di produk ini']; 
         });
@@ -149,6 +184,20 @@ abstract class SeepaysDetailDenomPostpaidController extends State<SeepaysDetailD
     }
     
     print('=== Seepays Postpaid getSuggestNumbers() END ===');
+  }
+
+  String _getCategoryIdFromKodeProduk(String kodeProduk) {
+    // Mapping manual dari kode_produk ke category_id berdasarkan response API terbaru
+    Map<String, String> kodeProdukToCategoryId = {
+      'PLNPOSTPAID': '5eb704e9c78b532ed2ab4137', // PLN Pascabayar - dari response API terbaru
+      'PLNNONH': '5f6f592fcfaf6fdcf9ad2126',     // PLN NONTAGLIS 
+      'PLN NONTAGLIS': '5f6f592fcfaf6fdcf9ad2126', // PLN NONTAGLIS alternative name
+      // Tambahkan mapping lain jika diperlukan
+    };
+    
+    String mappedCategoryId = kodeProdukToCategoryId[kodeProduk] ?? '';
+    print('🗺️ Mapping $kodeProduk -> $mappedCategoryId');
+    return mappedCategoryId;
   }
 
   void selectSuggestNumber(String number) {

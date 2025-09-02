@@ -121,12 +121,20 @@ abstract class SeepaysDetailDenomController extends State<SeepaysDetailDenom>
       setState(() { loadingSuggest = true; });
 
       // Gunakan kategori ID untuk pulsa jika tersedia
-      String apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=${widget.menu.category_id}&limit=10&skip=0';
-      if (widget.menu.category_id == null || widget.menu.category_id.isEmpty) {
-        // Fallback untuk pulsa jika category_id kosong
-        apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=685b71969a3036284f0d8fec&limit=10&skip=0';
-        print('⚠️ Category ID kosong, menggunakan fallback');
+      String finalCategoryId = widget.menu.category_id ?? '';
+      
+      print('🔍 Final Category ID before check: "$finalCategoryId"');
+      
+      if (finalCategoryId.isEmpty || finalCategoryId == 'null') {
+        print('⚠️ Category ID kosong atau null, menampilkan pesan "Belum pernah transaksi"');
+        setState(() { 
+          suggestNumbers = ['Belum pernah transaksi di produk ini']; 
+          loadingSuggest = false;
+        });
+        return;
       }
+      
+      String apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=$finalCategoryId&limit=10&skip=0';
       
       print('🌐 Seepays API Endpoint: $apiEndpoint');
       print('🔍 Category ID: ${widget.menu.category_id}');

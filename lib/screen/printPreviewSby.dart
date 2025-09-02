@@ -149,7 +149,7 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
     });
     getData();
     analitycs.pageView('/transaksi/' + widget.trx.id + '/print',
-        {'userId': bloc.userId.valueWrapper.value, 'title': 'Print Transaksi'});
+        {'userId': bloc.userId.valueWrapper?.value, 'title': 'Print Transaksi'});
     harga = trxData.harga_jual;
     total = harga + admin;
     txtHarga.text = harga.toString();
@@ -168,7 +168,7 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
     });
 
     if (dynamicFooterStruk) {
-      if (configAppBloc.info.valueWrapper.value.footerStruk.isNotEmpty) {
+      if (configAppBloc.info.valueWrapper?.value?.footerStruk?.isNotEmpty == true) {
         setState(() {
           footerStruk = configAppBloc.info.valueWrapper.value.footerStruk;
         });
@@ -246,10 +246,31 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
   // Method to generate receipt data for network printing
   Future<Uint8List> generateReceiptData() async {
     try {
+      // Validate data before generating
+      if (trxData == null) {
+        print('❌ Error: Transaction data is null');
+        throw Exception('Data transaksi tidak tersedia');
+      }
+      
+      if (bloc.user.valueWrapper?.value == null) {
+        print('❌ Error: User data is null');
+        throw Exception('Data user tidak tersedia');
+      }
+      
+      print('✅ Generating receipt data for transaction: ${trxData.id}');
       final profile = await CapabilityProfile.load();
-      return v1(PaperSize.mm58, profile);
+      final receiptData = v1(PaperSize.mm58, profile);
+      
+      if (receiptData.isEmpty) {
+        print('❌ Error: Generated receipt data is empty');
+        throw Exception('Data struk kosong');
+      }
+      
+      print('✅ Receipt data generated successfully, size: ${receiptData.length} bytes');
+      return receiptData;
     } catch (e) {
-      print('Error generating receipt data: $e');
+      print('❌ Error generating receipt data: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
       throw Exception('Error generating receipt data: $e');
     }
   }
@@ -259,7 +280,7 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
       Generator ticket = Generator(paperSize, profile);
       List<int> bytes = [];
       ticket.setGlobalFont(PosFontType.fontA);
-      int i = bloc.printerFontSize.valueWrapper.value - 1;
+      int i = (bloc.printerFontSize.valueWrapper?.value ?? 1) - 1;
       List<PosTextSize> sizes = [
         PosTextSize.size1,
         PosTextSize.size2,
@@ -274,14 +295,17 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
       bytes += ticket.emptyLines(1);
       
       // Validate user data
-      if (bloc.user.valueWrapper.value == null) {
+      if (bloc.user.valueWrapper?.value == null) {
+        print('❌ Error: User data is null in v1()');
         throw Exception('Data user tidak valid');
       }
       
+      print('✅ User data validation passed for: ${bloc.user.valueWrapper.value?.nama}');
+      
       // Print store name first
-      String storeName = bloc.user.valueWrapper.value.namaToko.isEmpty
-          ? bloc.user.valueWrapper.value.nama
-          : bloc.user.valueWrapper.value.namaToko;
+      String storeName = bloc.user.valueWrapper.value?.namaToko?.isEmpty == true
+          ? bloc.user.valueWrapper.value?.nama ?? ''
+          : bloc.user.valueWrapper.value?.namaToko ?? '';
       
       if (storeName.isEmpty) {
         storeName = 'Toko';
@@ -297,9 +321,9 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
         ),
       );
       
-      String storeAddress = bloc.user.valueWrapper.value.alamatToko.isEmpty
-          ? bloc.user.valueWrapper.value.alamat
-          : bloc.user.valueWrapper.value.alamatToko;
+      String storeAddress = bloc.user.valueWrapper.value?.alamatToko?.isEmpty == true
+          ? bloc.user.valueWrapper.value?.alamat ?? ''
+          : bloc.user.valueWrapper.value?.alamatToko ?? '';
       
       if (storeAddress.isNotEmpty) {
         bytes += ticket.text(
@@ -327,8 +351,22 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
       
       // Validate transaction data
       if (trxData == null) {
+        print('❌ Error: Transaction data is null in v1()');
         throw Exception('Data transaksi tidak valid');
       }
+      
+      // Additional validation
+      if (trxData.id == null || trxData.id.isEmpty) {
+        print('❌ Error: Transaction ID is null or empty');
+        throw Exception('ID transaksi tidak valid');
+      }
+      
+      if (trxData.produk == null) {
+        print('❌ Error: Product data is null');
+        throw Exception('Data produk tidak valid');
+      }
+      
+      print('✅ Transaction data validation passed for ID: ${trxData.id}');
       
       bytes += ticket.text(
         formatDate(trxData.created_at, 'dd MMMM yyyy HH:mm:ss'),
@@ -361,9 +399,11 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
       ]);
       
       if (trxData.print != null && trxData.print.isNotEmpty) {
+        print('✅ Processing ${trxData.print.length} print data items');
         trxData.print.forEach((el) {
           if (!['token', 'jumlah', 'nominal', 'tagihan', 'admin']
               .contains(el['label'].toString().toLowerCase())) {
+            print('📝 Adding print line: ${el['label']} = ${el['value']}');
             bytes += printLine(ticket, [
               {
                 'label': el['label'] ?? 'Label',
@@ -372,6 +412,15 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
             ]);
           }
         });
+      } else {
+        print('⚠️ Warning: No print data available or print data is empty');
+        // Add basic transaction info if print data is empty
+        bytes += printLine(ticket, [
+          {
+            'label': 'Nama Produk',
+            'value': trxData.produk['nama'] ?? 'Tidak ada nama produk',
+          },
+        ]);
       }
       
       if (showSN) {
@@ -484,18 +533,34 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
 
   Future<void> v2() async {
     await _bluetooth.printNewLine();
+    
+    // Validate user data first
+    if (bloc.user.valueWrapper?.value == null) {
+      print('❌ Error: User data is null in v2()');
+      throw Exception('Data user tidak valid');
+    }
+    
     // Print store name first
+    String v2StoreName = bloc.user.valueWrapper.value?.namaToko?.isEmpty == true
+        ? bloc.user.valueWrapper.value?.nama ?? ''
+        : bloc.user.valueWrapper.value?.namaToko ?? '';
+        
+    if (v2StoreName.isEmpty) {
+      v2StoreName = 'Toko';
+    }
+    
     await _bluetooth.printCustom(
-      bloc.user.valueWrapper.value.namaToko.isEmpty
-          ? bloc.user.valueWrapper.value.nama
-          : bloc.user.valueWrapper.value.namaToko,
+      v2StoreName,
       2,
       1,
     );
+    
+    String v2StoreAddress = bloc.user.valueWrapper.value?.alamatToko?.isEmpty == true
+        ? bloc.user.valueWrapper.value?.alamat ?? ''
+        : bloc.user.valueWrapper.value?.alamatToko ?? '';
+        
     await _bluetooth.printCustom(
-      bloc.user.valueWrapper.value.alamatToko.isEmpty
-          ? bloc.user.valueWrapper.value.alamat
-          : bloc.user.valueWrapper.value.alamatToko,
+      v2StoreAddress,
       0,
       1,
     );
@@ -668,7 +733,7 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
         return;
       }
 
-      switch (bloc.printerType.valueWrapper.value) {
+      switch (bloc.printerType.valueWrapper?.value ?? 1) {
         case 1:
           Uint8List bytes = v1(PaperSize.mm58, _profile);
           int totalChunks = (bytes.length - (bytes.length % 100)) ~/ 100;
@@ -703,13 +768,20 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
       }
       showToast(context, 'Berhasil mencetak struk');
     } catch (e) {
-      print('Print Error: $e');
+      print('❌ Print Error: $e');
+      print('❌ Print Error Stack Trace: ${StackTrace.current}');
+      
+      // More specific error handling
       if (e.toString().contains('Bluetooth')) {
         showToast(context, 'Error koneksi Bluetooth: ${e.toString()}');
-      } else if (e.toString().contains('data')) {
+      } else if (e.toString().contains('data') || e.toString().contains('transaksi')) {
         showToast(context, 'Error data transaksi: ${e.toString()}');
       } else if (e.toString().contains('profile')) {
         showToast(context, 'Error profile printer: ${e.toString()}');
+      } else if (e.toString().contains('kosong') || e.toString().contains('empty')) {
+        showToast(context, 'Data struk kosong, periksa data transaksi');
+      } else if (e.toString().contains('user')) {
+        showToast(context, 'Error data user: ${e.toString()}');
       } else {
         showToast(context, 'Gagal mencetak struk: ${e.toString()}');
       }
@@ -738,9 +810,11 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
             onPressed: () => Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (_) =>
-                      configAppBloc.layoutApp?.valueWrapper.value['home'] ??
+                      (configAppBloc.layoutApp?.valueWrapper?.value != null
+                          ? configAppBloc.layoutApp.valueWrapper.value['home']
+                          : null) ??
                       templateConfig[
-                          configAppBloc.templateCode.valueWrapper.value],
+                          configAppBloc.templateCode.valueWrapper?.value],
                 ),
                 (route) => false),
           ),
@@ -943,18 +1017,17 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10.0),
-                        image: configAppBloc.iconApp.valueWrapper
-                                    .value['backgroundStruk'] ==
-                                null
-                            ? null
-                            : DecorationImage(
-                                image: CachedNetworkImageProvider(configAppBloc
-                                    .iconApp
-                                    .valueWrapper
-                                    .value['backgroundStruk']),
-                                repeat: ImageRepeat.repeat,
-                                fit: BoxFit.scaleDown,
-                              ),
+                        image: (configAppBloc.iconApp.valueWrapper?.value != null &&
+                                    configAppBloc.iconApp.valueWrapper.value['backgroundStruk'] != null)
+                                ? DecorationImage(
+                                    image: CachedNetworkImageProvider(configAppBloc
+                                        .iconApp
+                                        .valueWrapper
+                                        .value['backgroundStruk']),
+                                    repeat: ImageRepeat.repeat,
+                                    fit: BoxFit.scaleDown,
+                                  )
+                                : null,
                       ),
                       child: Container(
                         width: double.infinity,
@@ -978,8 +1051,9 @@ class _PrintPreviewSbyState extends PrintPreviewSbyController {
                             Stack(
                               children: [
                                 // Show logo if available and isLogoPrinter is true
-                                isLogoPrinter && configAppBloc.iconApp.valueWrapper
-                                            .value['logoPrinter'] != null
+                                isLogoPrinter && 
+                                configAppBloc.iconApp.valueWrapper?.value != null &&
+                                configAppBloc.iconApp.valueWrapper.value['logoPrinter'] != null
                                     ? Container(
                                         child: CachedNetworkImage(
                                           imageUrl: configAppBloc
@@ -1307,7 +1381,7 @@ abstract class PrintPreviewSbyController extends State<PrintPreviewSby>
   void getData() async {
     http.Response response = await http.get(
         Uri.parse('$apiUrl/trx/${widget.trx.id}/print'),
-        headers: {'Authorization': bloc.token.valueWrapper.value});
+        headers: {'Authorization': bloc.token.valueWrapper?.value});
 
     if (response.statusCode == 200) {
       var responseData = json.decode(response.body)['data'];
@@ -1362,38 +1436,55 @@ abstract class PrintPreviewSbyController extends State<PrintPreviewSby>
 
   Future<void> ambilDataTerbaru() async {
     print("Fungsi ambilDataTerbaru dipanggil");
-    String productId = widget.trx.produk['_id'];
-    print(productId);
-    http.Response response = await http.get(
-      Uri.parse('$apiUrl/product/member/$productId'),
-      headers: {
-        'Authorization': bloc.token.valueWrapper?.value,
-      },
-    );
+    try {
+      String productId = widget.trx.produk['_id'];
+      print("Product ID: $productId");
+      
+      http.Response response = await http.get(
+        Uri.parse('$apiUrl/product/member/$productId'),
+        headers: {
+          'Authorization': bloc.token.valueWrapper?.value,
+        },
+      );
 
-    if (response.statusCode == 200) {
-      var responseData = json.decode(response.body);
+      print("Response Status: ${response.statusCode}");
       print("Full JSON Response: ${response.body}");
-      int hargaBaru = responseData['data']['harga'];
-      int adminBaru = responseData['data']['admin'];
 
-      if (widget.isPostpaid && hargaBaru <= 0) {
-        hargaBaru = trxData.harga_jual;
+      if (response.statusCode == 200) {
+        var responseData = json.decode(response.body);
+        
+        // Validate response structure
+        if (responseData['data'] is Map && 
+            responseData['data']['harga'] != null && 
+            responseData['data']['admin'] != null) {
+          
+          int hargaBaru = responseData['data']['harga'];
+          int adminBaru = responseData['data']['admin'];
+
+          if (widget.isPostpaid && hargaBaru <= 0) {
+            hargaBaru = trxData.harga_jual;
+          }
+
+          setState(() {
+            harga = hargaBaru;
+            admin = adminBaru;
+            txtHarga.text = hargaBaru.toString();
+            txtAdmin.text = adminBaru.toString();
+            total = harga + admin + cetak;
+          });
+
+          print('✅ Data berhasil diupdate - Harga: $hargaBaru, Admin: $adminBaru');
+        } else {
+          print('⚠️ Response data structure tidak valid: ${responseData['data']}');
+        }
+      } else {
+        print('❌ API Error ${response.statusCode}: ${response.body}');
+        // Don't update data if API fails, keep existing values
       }
-
-      setState(() {
-        harga = hargaBaru;
-        admin = adminBaru;
-
-        txtHarga.text = hargaBaru.toString();
-        txtAdmin.text = adminBaru.toString();
-
-        total = harga + admin + cetak;
-      });
-
-      print('Harga baru: $hargaBaru, Admin baru: $adminBaru');
-    } else {
-      print('Gagal mengambil data terbaru: ${response.body}');
+    } catch (e) {
+      print('❌ Exception in ambilDataTerbaru: $e');
+      print('❌ Stack trace: ${StackTrace.current}');
+      // Don't update data if exception occurs, keep existing values
     }
   }
 }

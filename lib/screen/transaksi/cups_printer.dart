@@ -202,15 +202,35 @@ class _CupsPrinterPageState extends State<CupsPrinterPage> {
     });
 
     try {
+      // Validate data first
+      if (widget.trx == null) {
+        _showError('Data transaksi tidak tersedia');
+        return;
+      }
+      
+      if (bloc.user.valueWrapper?.value == null) {
+        _showError('Data user tidak tersedia');
+        return;
+      }
+      
+      debugPrint('✅ Generating print data for transaction: ${widget.trx.id}');
+      
       // Generate print data using ESC/POS
       final profile = await CapabilityProfile.load();
       final generator = Generator(PaperSize.mm58, profile);
       
       List<int> bytes = [];
+      
+      String storeName = bloc.user.valueWrapper?.value?.namaToko?.isEmpty == true
+          ? bloc.user.valueWrapper?.value?.nama ?? ''
+          : bloc.user.valueWrapper?.value?.namaToko ?? '';
+          
+      if (storeName.isEmpty) {
+        storeName = 'Toko';
+      }
+      
       bytes += generator.text(
-        bloc.user.valueWrapper?.value?.namaToko?.isEmpty == true
-            ? bloc.user.valueWrapper?.value?.nama ?? ''
-            : bloc.user.valueWrapper?.value?.namaToko ?? '',
+        storeName,
         styles: PosStyles(
           bold: true,
           align: PosAlign.center,

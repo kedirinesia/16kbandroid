@@ -41,14 +41,26 @@ abstract class ListSubMenuController extends State<ListSubMenu>
       loading = true;
     });
 
+    String apiEndpoint = '$apiUrl/menu/${currentMenu.id}/child';
+    print('🌐 ListSubMenu API Endpoint: $apiEndpoint');
+    
     http.Response response = await http.get(
-        Uri.parse('$apiUrl/menu/${currentMenu.id}/child'),
+        Uri.parse(apiEndpoint),
         headers: {'Authorization': bloc.token.valueWrapper?.value});
+
+    print('📡 ListSubMenu Response Status: ${response.statusCode}');
+    print('📡 ListSubMenu Response Body: ${response.body}');
 
     if (response.statusCode == 200) {
       List<MenuModel> lm = (jsonDecode(response.body)['data'] as List)
           .map((m) => MenuModel.fromJson(m))
           .toList();
+      
+      print('📊 ListSubMenu: ${lm.length} sub-menu items found');
+      for (MenuModel menu in lm) {
+        print('📋 Sub-menu: ${menu.name} | type: ${menu.type} | category_id: "${menu.category_id}" | kodeProduk: "${menu.kodeProduk}"');
+      }
+      
       tempMenu = lm;
       listMenu = lm;
     } else {
@@ -61,23 +73,31 @@ abstract class ListSubMenuController extends State<ListSubMenu>
   }
 
   onTapMenu(MenuModel menu) async {
+    print('📌 ListSubMenu Menu diklik: ${menu.name} | type: ${menu.type} | category_id: "${menu.category_id}" | kodeProduk: "${menu.kodeProduk}"');
+    
     if (menu.category_id.isNotEmpty && menu.type == 1) {
+      print('➡️ ListSubMenu menuju ke: SeepaysDetailDenom (Prepaid)');
       return Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => SeepaysDetailDenom(menu),
         ),
       );
     } else if (menu.kodeProduk.isNotEmpty && menu.type == 2) {
+      print('➡️ ListSubMenu menuju ke: SeepaysDetailDenomPostpaid (Postpaid)');
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => SeepaysDetailDenomPostpaid(menu)));
     } else if (menu.category_id.isEmpty) {
       if (menu.type == 3) {
+        print('➡️ ListSubMenu menuju ke: DynamicPrepaidDenom');
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => DynamicPrepaidDenom(menu)));
       } else {
+        print('➡️ ListSubMenu menuju ke: ListSubMenu (nested)');
         Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => ListSubMenu(menu)));
       }
+    } else {
+      print('❌ ListSubMenu: Menu tidak memenuhi kondisi routing apapun');
     }
   }
 } 
