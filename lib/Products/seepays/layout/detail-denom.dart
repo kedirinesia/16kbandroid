@@ -277,14 +277,32 @@ class _SeepaysDetailDenomState extends SeepaysDetailDenomController {
                           spacing: 8,
                           runSpacing: 8,
                           children: suggestNumbers
-                              .map((e) => ActionChip(
-                                    label: Text(e),
-                                    onPressed: () {
-                                      setState(() {
-                                        tujuan.text = e;
-                                      });
-                                    },
-                                  ))
+                              .map((e) => 
+                                e == 'Belum pernah transaksi di produk ini'
+                                  ? Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        e,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    )
+                                  : ActionChip(
+                                      label: Text(e),
+                                      onPressed: () {
+                                        setState(() {
+                                          tujuan.text = e;
+                                        });
+                                      },
+                                    )
+                              )
                               .toList(),
                         ),
                       )

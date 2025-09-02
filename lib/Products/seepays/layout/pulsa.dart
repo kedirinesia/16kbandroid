@@ -63,6 +63,13 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
     // Load transaction history
     print('🔄 Seepays: Loading transaction history on init...');
     loadTransactionHistory();
+    
+    // Add listener untuk menangani paste event
+    nomorHp.addListener(() {
+      if (nomorHp.text.isNotEmpty && nomorHp.text.length >= 4) {
+        _handleNumberInput(nomorHp.text);
+      }
+    });
   }
 
   // Methods from PulsaController
@@ -102,6 +109,38 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
         selectedDenom = denom;
       });
     }
+  }
+
+  // Helper function untuk menangani input nomor (termasuk paste)
+  void _handleNumberInput(String str) {
+    print('🔢 Seepays: Handling number input: $str');
+    
+    if (str.length >= 4 && str.startsWith('08')) {
+      String newPrefix = str.substring(0, 4);
+      print('📱 Seepays: Detected prefix: $newPrefix, current prefix: $prefixNomor');
+      
+      if (newPrefix != prefixNomor) {
+        print('🔄 Seepays: Prefix changed, updating operator logo and fetching denom');
+        setState(() {
+          listDenom.clear();
+          prefixNomor = newPrefix;
+          loading = true;
+          // Enable logo product menu cover untuk Seepays
+          logoProductMenuCover = true;
+        });
+        getDenom(str);
+      } else {
+        print('ℹ️ Seepays: Same prefix, no update needed');
+      }
+    } else {
+      print('❌ Seepays: Invalid number format or too short');
+    }
+  }
+
+  @override
+  void dispose() {
+    nomorHp.dispose();
+    super.dispose();
   }
 
   // Load transaction history
@@ -405,15 +444,14 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       // KODE API BARU - MENGGUNAKAN API LAST TRANSACTION UNTUK SUGGEST HISTORY
       // ================================================================================
       // Gunakan kategori ID untuk pulsa jika tersedia
-      String apiEndpoint = '${seepays_config.apiUrl}/trx/list?page=0&limit=50';
-      if (widget.menuModel.category_id != null && widget.menuModel.category_id.isNotEmpty) {
-        apiEndpoint = '${seepays_config.apiUrl}/trx/list?page=0&limit=50&kategori_id=${widget.menuModel.category_id}';
-      } else if (widget.menuModel.name.toLowerCase().contains('pulsa')) {
+      String apiEndpoint = '${seepays_config.apiUrl}/trx/lastTransaction?kategori_id=${widget.menuModel.category_id}&limit=10&skip=0';
+      if (widget.menuModel.category_id == null || widget.menuModel.category_id.isEmpty) {
         // Fallback untuk pulsa jika category_id kosong
-        apiEndpoint = '${seepays_config.apiUrl}/trx/list?page=0&limit=50&kategori_id=685b71969a3036284f0d8fec';
+        apiEndpoint = '${seepays_config.apiUrl}/trx/lastTransaction?kategori_id=685b71969a3036284f0d8fec&limit=10&skip=0';
       }
       
       print('🌐 Seepays API Endpoint: $apiEndpoint');
+      print('🔍 Category ID: ${widget.menuModel.category_id}');
       
       http.Response response = await http.get(
         Uri.parse(apiEndpoint),
@@ -430,37 +468,63 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
           List<dynamic> datas = [];
           
           // Handle response format sesuai dengan API lastTransaction
-          if (responseData is Map<String, dynamic>) {
-            // Format: {"status": 200, "data": [...]}
-            datas = responseData['data'] ?? [];
-            print('📋 Seepays: Response format: Map with data array');
-          } else if (responseData is List) {
-            // Format: [...] (langsung array)
+          if (responseData is List) {
+            // Format: [...] (langsung array) - untuk lastTransaction
             datas = responseData;
-            print('📋 Seepays: Response format: Direct array');
+            print('📋 Seepays: Response format: Direct array (lastTransaction)');
+          } else if (responseData is Map<String, dynamic>) {
+            // Format: {"status": 200, "data": [...]} - fallback untuk list
+            datas = responseData['data'] ?? [];
+            print('📋 Seepays: Response format: Map with data array (fallback)');
           } else {
             print('⚠️ Seepays: Unexpected response format: ${responseData.runtimeType}');
             datas = [];
           }
           
           print('📊 Seepays: Found ${datas.length} transactions in response');
+
+          if (datas.isEmpty) {
+            print('📭 Seepays: No transactions found for category: ${widget.menuModel.category_id}');
+            setState(() {
+              recentTransactions = [TransactionHistoryModel(tujuan: 'Belum pernah transaksi di produk ini')];
+            });
+            return;
+          }
           print('📋 Seepays: Response data type: ${responseData.runtimeType}');
           
           if (datas.isNotEmpty) {
-            List<TransactionHistoryModel> apiHistory = datas
-                .map((item) => TransactionHistoryModel.fromJson(item))
-                .toList();
+            print('🔍 Seepays: Parsing ${datas.length} items...');
+            print('🔍 Seepays: First item: ${datas.first}');
+            
+            List<TransactionHistoryModel> apiHistory = [];
+            for (int i = 0; i < datas.length; i++) {
+              try {
+                // Konversi field 'tanggal' ke 'created_at' untuk kompatibilitas
+                Map<String, dynamic> item = Map<String, dynamic>.from(datas[i]);
+                if (item.containsKey('tanggal') && !item.containsKey('created_at')) {
+                  item['created_at'] = item['tanggal'];
+                }
+                
+                TransactionHistoryModel trx = TransactionHistoryModel.fromJson(item);
+                apiHistory.add(trx);
+                print('✅ Seepays: Successfully parsed item $i: ${trx.tujuan}');
+              } catch (e) {
+                print('❌ Seepays: Error parsing item $i: $e');
+                print('❌ Seepays: Raw item: ${datas[i]}');
+              }
+            }
             
             setState(() {
               transactionHistory = apiHistory;
               
-              // Filter transaksi pulsa berdasarkan kategori_id yang sudah spesifik
+              // Filter transaksi pulsa - untuk lastTransaction, terima semua karena sudah difilter di API
+              print('🔍 Seepays: Filtering ${apiHistory.length} transactions...');
               recentTransactions = apiHistory
-                  .where((trx) => 
-                      trx.status == 2 && // Transaksi sukses saja
-                      trx.tujuan.isNotEmpty &&
-                      trx.tujuan.startsWith('08') // Nomor HP Indonesia
-                  )
+                  .where((trx) {
+                    bool isValid = trx.tujuan.isNotEmpty && trx.tujuan.startsWith('08');
+                    print('🔍 Seepays: Transaction ${trx.tujuan} - isValid: $isValid');
+                    return isValid;
+                  })
                   .take(10) // Tampilkan sampai 10 transaksi terbaru sesuai limit API
                   .toList();
             });
@@ -470,7 +534,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
           } else {
             print('📭 Seepays: No transactions found in response');
             setState(() {
-              recentTransactions = [];
+              recentTransactions = [TransactionHistoryModel(tujuan: 'Belum pernah transaksi di produk ini')];
             });
           }
           
@@ -478,16 +542,20 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
           print('❌ Seepays: Error parsing API response: $parseError');
           print('🔍 Seepays: Raw response: ${response.body}');
           
-          // Fallback ke hardcoded data jika parsing gagal
-          _loadHardcodedPulsaData();
+          // Tampilkan pesan error
+          setState(() {
+            recentTransactions = [TransactionHistoryModel(tujuan: 'Belum pernah transaksi di produk ini')];
+          });
         }
         
       } else {
         print('❌ Seepays: Failed to load transaction history: ${response.statusCode}');
         print('Response: ${response.body}');
         
-        // Fallback ke hardcoded data jika API gagal
-        _loadHardcodedPulsaData();
+        // Tampilkan pesan error
+        setState(() {
+          recentTransactions = [TransactionHistoryModel(tujuan: 'Belum pernah transaksi di produk ini')];
+        });
       }
       // ================================================================================
       
@@ -779,34 +847,34 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       {
         'name': 'indosat',
         'prefix': '0814, 0815, 0816, 0855, 0856, 0857, 0858',
-        'url': 'https://ayoba.co.id/dokumen/provider/indosat.png',
+        'url': 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Indosat_Ooredoo.svg/2560px-Indosat_Ooredoo.svg.png',
       },
       {
         'name': 'telkomsel',
         'prefix': '0811, 0812, 0813, 0821, 0822, 0823, 0852, 0853, 0851',
-        'url': 'https://ayoba.co.id/dokumen/provider/tsel.png',
+        'url': 'https://maxsi.id/web/assets/logo-telkomsel-baru.DYhv_uL8_1T5nit.webp',
       },
       {
         'name': 'three',
         'prefix': '0895, 0896, 0897, 0898, 0899',
-        'url': 'https://ayoba.co.id/dokumen/provider/three.png',
+        'url': 'http://bloguna.com/wp-content/uploads/2025/06/Logo-3-Tri-Three-Format-PNG-PDF-AI-SVG-EPS-CDR.webp',
       },
       {
         'name': 'xl',
         'prefix': '0817, 0818, 0819, 0859, 0877, 0878',
-        'url': 'https://ayoba.co.id/dokumen/provider/xl.png',
+        'url': 'https://staticxl.ext.xlaxiata.co.id/s3fs-public/media/images/big-xl-logo.png',
       },
       {
         'name': 'smartfren',
         'prefix': '0881, 0882, 0883, 0884, 0885, 0886, 0887, 0888, 0889',
-        'url': 'https://ayoba.co.id/dokumen/provider/smart.png',
+        'url': 'https://www.logo.wine/a/logo/Smartfren/Smartfren-Logo.wine.svg',
       },
       {
         'name': 'axis',
         'prefix': '0838, 0831, 0832, 0833',
         'url':
             // 'https://i.pinimg.com/originals/d0/31/31/d031314a78e8ac9d4b4ce2593698ee1f.png',
-            'https://ayoba.co.id/dokumen/provider/axis.png',
+            'https://download.logo.wine/logo/Axis_Telecom/Axis_Telecom-Logo.wine.png',
       },
     ];
 
@@ -819,6 +887,8 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       'com.popayfdn',
       'com.xenaja.app',
       'com.talentapay.android',
+      'com.seepays.mobile',
+      'com.seepaysbiller.app',
     ];
 
     List<String> pkgNameIconMenuList = [
@@ -931,6 +1001,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                     padding: EdgeInsets.all(20),
                     child: packageName == 'com.eralink.mobileapk'
                         ? TextFormField(
+                            // TextFormField untuk Eralink
                             controller: nomorHp,
                             keyboardType: TextInputType.number,
                             cursorColor: Theme.of(context).primaryColor,
@@ -985,7 +1056,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                               logoProductMenuCover = true;
                                           });
                                         });
-                                        getDenom(response.tujuan);
+                                        _handleNumberInput(response.tujuan);
                                       }
                                     }
                                   }),
@@ -1001,7 +1072,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                       .then((nomor) {
                                     if (nomor != null) {
                                       nomorHp.text = nomor;
-                                      getDenom(nomor);
+                                      _handleNumberInput(nomor);
                                     }
                                   });
                                 },
@@ -1014,23 +1085,11 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                   : FontWeight.normal,
                             ),
                             onChanged: (str) {
-                              if (str.length >= 4 && str.startsWith('08')) {
-                                if (str.substring(0, 4) != prefixNomor) {
-                                  setState(() {
-                                    listDenom.clear();
-                                    prefixNomor = str.substring(0, 4);
-                                    loading = true;
-                                    pkgNameLogoMenuCoverList.forEach((e) {
-                                      if (e == packageName)
-                                        logoProductMenuCover = true;
-                                    });
-                                  });
-                                  getDenom(str);
-                                }
-                              }
+                              _handleNumberInput(str);
                             },
                           )
                         : TextFormField(
+                            // TextFormField untuk produk lain (non-Eralink)
                             controller: nomorHp,
                             keyboardType: TextInputType.number,
                             inputFormatters: [
@@ -1072,7 +1131,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                               logoProductMenuCover = true;
                                           });
                                         });
-                                        getDenom(response.tujuan);
+                                        _handleNumberInput(response.tujuan);
                                       }
                                     }
                                   }),
@@ -1085,7 +1144,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                       .then((nomor) {
                                     if (nomor != null) {
                                       nomorHp.text = nomor;
-                                      getDenom(nomor);
+                                      _handleNumberInput(nomor);
                                     }
                                   });
                                 },
@@ -1098,20 +1157,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                   : FontWeight.normal,
                             ),
                             onChanged: (str) {
-                              if (str.length >= 4 && str.startsWith('08')) {
-                                if (str.substring(0, 4) != prefixNomor) {
-                                  setState(() {
-                                    listDenom.clear();
-                                    prefixNomor = str.substring(0, 4);
-                                    loading = true;
-                                    pkgNameLogoMenuCoverList.forEach((e) {
-                                      if (e == packageName)
-                                        logoProductMenuCover = true;
-                                    });
-                                  });
-                                  getDenom(str);
-                                }
-                              }
+                              _handleNumberInput(str);
                             },
                           )),
                 
@@ -1191,24 +1237,40 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
                                     final trx = recentTransactions[index];
                                     return Container(
                                       margin: EdgeInsets.only(right: 8),
-                                      child: ActionChip(
-                                        label: Text(
-                                          trx.tujuan,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
+                                      child: trx.tujuan == 'Belum pernah transaksi di produk ini'
+                                        ? Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[200],
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              trx.tujuan,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey[600],
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          )
+                                        : ActionChip(
+                                            label: Text(
+                                              trx.tujuan,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            backgroundColor: Colors.blue[50],
+                                            labelStyle: TextStyle(color: Colors.blue[700]),
+                                            onPressed: () {
+                                              nomorHp.text = trx.tujuan;
+                                              // Trigger getDenom jika nomor valid
+                                              if (trx.tujuan.length >= 4 && trx.tujuan.startsWith('08')) {
+                                                _handleNumberInput(trx.tujuan);
+                                              }
+                                            },
                                           ),
-                                        ),
-                                        backgroundColor: Colors.blue[50],
-                                        labelStyle: TextStyle(color: Colors.blue[700]),
-                                        onPressed: () {
-                                          nomorHp.text = trx.tujuan;
-                                          // Trigger getDenom jika nomor valid
-                                          if (trx.tujuan.length >= 4 && trx.tujuan.startsWith('08')) {
-                                            getDenom(trx.tujuan);
-                                          }
-                                        },
-                                      ),
                                     );
                                   },
                                 ),

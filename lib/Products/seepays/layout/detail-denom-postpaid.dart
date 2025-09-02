@@ -151,6 +151,56 @@ class _SeepaysDetailDenomPostpaidState extends SeepaysDetailDenomPostpaidControl
                  ),
                ),
                SizedBox(height: 20),
+               // Suggest Numbers untuk Seepays
+               if (suggestNumbers.isNotEmpty && packageName == 'com.seepaysbiller.app')
+                 Container(
+                   width: double.infinity,
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text(
+                         'Riwayat Transaksi:',
+                         style: TextStyle(
+                           fontWeight: FontWeight.bold,
+                           fontSize: 14,
+                         ),
+                       ),
+                       SizedBox(height: 8),
+                       Wrap(
+                         spacing: 8,
+                         runSpacing: 8,
+                         children: suggestNumbers
+                             .map((number) => 
+                               number == 'Belum pernah transaksi di produk ini'
+                                 ? Container(
+                                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                     decoration: BoxDecoration(
+                                       color: Colors.grey[200],
+                                       borderRadius: BorderRadius.circular(20),
+                                     ),
+                                     child: Text(
+                                       number,
+                                       style: TextStyle(
+                                         fontSize: 12,
+                                         color: Colors.grey[600],
+                                         fontStyle: FontStyle.italic,
+                                       ),
+                                     ),
+                                   )
+                                 : ActionChip(
+                                     label: Text(
+                                       number,
+                                       style: TextStyle(fontSize: 12),
+                                     ),
+                                     onPressed: () => selectSuggestNumber(number),
+                                   )
+                             )
+                             .toList(),
+                       ),
+                     ],
+                   ),
+                 ),
+               SizedBox(height: 20),
                Container(
                  width: double.infinity,
                  child: ElevatedButton(

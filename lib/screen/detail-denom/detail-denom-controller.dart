@@ -131,10 +131,14 @@ abstract class DetailDenomController extends State<DetailDenom>
         // API khusus Payuniovo
         apiEndpoint = 'https://payuni-app.findig.id/api/v1/trx/lastTransaction?kategori_id=${widget.menu.category_id}&limit=10&skip=0';
         print('🌐 Menggunakan API Payuniovo: $apiEndpoint');
-      } else {
-        // API Seepays
-        apiEndpoint = '$apiUrl/trx/list?page=0&limit=50';
+      } else if (packageName == 'com.seepaysbiller.app') {
+        // API khusus Seepays - menggunakan lastTransaction
+        apiEndpoint = 'https://app.payuni.co.id/api/v1/trx/lastTransaction?kategori_id=${widget.menu.category_id}&limit=10&skip=0';
         print('🌐 Menggunakan API Seepays: $apiEndpoint');
+      } else {
+        // API default untuk produk lain - menggunakan /trx/list
+        apiEndpoint = '$apiUrl/trx/list?page=0&limit=50';
+        print('🌐 Menggunakan API Default: $apiEndpoint');
       }
 
       print('📡 Calling API...');
@@ -152,12 +156,12 @@ abstract class DetailDenomController extends State<DetailDenom>
         List<dynamic> datas;
         String sortKey;
         
-        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id') {
-          // Response Payuniovo langsung berupa array
+        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id' || packageName == 'com.seepaysbiller.app') {
+          // Response Payuniovo dan Seepays langsung berupa array
           datas = json.decode(response.body) as List<dynamic>;
           sortKey = 'tanggal';
         } else {
-          // Response Seepays nested dalam data
+          // Response produk lain nested dalam data
           final Map<String, dynamic> jsonBody = json.decode(response.body);
           datas = (jsonBody['data'] ?? []) as List<dynamic>;
           sortKey = 'created_at';
@@ -175,9 +179,9 @@ abstract class DetailDenomController extends State<DetailDenom>
 
         final Set<String> uniqueTargets = <String>{};
 
-        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id') {
-          // Payuniovo: terima semua format (PLN ID, HP, dll)
-          print('🔍 Processing Payuniovo data...');
+        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id' || packageName == 'com.seepaysbiller.app') {
+          // Payuniovo dan Seepays: terima semua format (PLN ID, HP, dll)
+          print('🔍 Processing Payuniovo/Seepays data...');
           for (final dynamic item in datas) {
             final String tujuanItem = (item['tujuan'] ?? '').toString().trim();
             print('🔍 Item tujuan: "$tujuanItem"');
@@ -194,9 +198,8 @@ abstract class DetailDenomController extends State<DetailDenom>
               print('❌ Tujuan tidak valid (length: ${tujuanItem.length}): $tujuanItem');
             }
           }
-          print('🔍 Total unique targets Payuniovo: ${uniqueTargets.length}');
+          print('🔍 Total unique targets Payuniovo/Seepays: ${uniqueTargets.length}');
         } else {
-          // Seepays: logic yang sudah ada
           // Allowed product codes from current denom list
           final Set<String> allowedCodes = listDenom
               .map((e) => (e.kode_produk ?? '').toString())

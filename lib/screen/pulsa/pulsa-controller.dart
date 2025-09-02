@@ -87,14 +87,18 @@ abstract class PulsaController extends State<Pulsa>
         // Gunakan kategori ID yang sudah di-fallback
         apiEndpoint = 'https://payuni-app.findig.id/api/v1/trx/lastTransaction?kategori_id=$kategoriId&limit=5&skip=0';
         print('🌐 Menggunakan API Payuniovo dengan kategori: $apiEndpoint');
+      } else if (packageName == 'com.seepaysbiller.app') {
+        // API khusus Seepays - menggunakan lastTransaction
+        apiEndpoint = 'https://app.payuni.co.id/api/v1/trx/lastTransaction?kategori_id=$kategoriId&limit=5&skip=0';
+        print('🌐 Menggunakan API Seepays dengan kategori: $apiEndpoint');
       } else {
-        // API Seepays - gunakan kategori ID jika tersedia
+        // API default untuk produk lain
         if (kategoriId.isNotEmpty) {
           apiEndpoint = '$apiUrl/trx/list?page=0&limit=50&kategori_id=$kategoriId';
-          print('🌐 Menggunakan API Seepays dengan kategori: $apiEndpoint');
+          print('🌐 Menggunakan API Default dengan kategori: $apiEndpoint');
         } else {
           apiEndpoint = '$apiUrl/trx/list?page=0&limit=50';
-          print('🌐 Menggunakan API Seepays tanpa kategori: $apiEndpoint');
+          print('🌐 Menggunakan API Default tanpa kategori: $apiEndpoint');
         }
       }
 
@@ -113,12 +117,12 @@ abstract class PulsaController extends State<Pulsa>
         List<dynamic> datas;
         String sortKey;
         
-        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id') {
-          // Response Payuniovo langsung berupa array
+        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id' || packageName == 'com.seepaysbiller.app') {
+          // Response Payuniovo dan Seepays langsung berupa array
           datas = json.decode(response.body) as List<dynamic>;
           sortKey = 'tanggal';
         } else {
-          // Response Seepays nested dalam data
+          // Response produk lain nested dalam data
           final Map<String, dynamic> jsonBody = json.decode(response.body);
           datas = (jsonBody['data'] ?? []) as List<dynamic>;
           sortKey = 'created_at';
@@ -136,9 +140,9 @@ abstract class PulsaController extends State<Pulsa>
 
         final Set<String> uniqueTargets = <String>{};
 
-        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id') {
-          // Payuniovo: terima semua format (PLN ID, HP, dll)
-          print('🔍 Processing Payuniovo data...');
+        if (packageName == 'mobile.payuni.id' || packageName == 'co.payuni.id' || packageName == 'com.seepaysbiller.app') {
+          // Payuniovo dan Seepays: terima semua format (PLN ID, HP, dll)
+          print('🔍 Processing Payuniovo/Seepays data...');
           for (final dynamic item in datas) {
             final String tujuanItem = (item['tujuan'] ?? '').toString().trim();
             print('🔍 Item tujuan: "$tujuanItem"');
@@ -155,9 +159,8 @@ abstract class PulsaController extends State<Pulsa>
               print('❌ Tujuan tidak valid (length: ${tujuanItem.length}): $tujuanItem');
             }
           }
-          print('🔍 Total unique targets Payuniovo: ${uniqueTargets.length}');
+          print('🔍 Total unique targets Payuniovo/Seepays: ${uniqueTargets.length}');
         } else {
-          // Seepays: logic yang sudah ada
           // Allowed product codes from current denom list
           final Set<String> allowedCodes = listDenom
               .map((e) => (e.kodeProduk ?? '').toString())

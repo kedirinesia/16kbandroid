@@ -28,13 +28,14 @@ abstract class SeepaysDetailDenomController extends State<SeepaysDetailDenom>
   @override
   void initState() {
     super.initState();
-    _getPackageName();
+    _getPackageName().then((_) {
+      getData();
+      getSuggestNumbers();
+    });
     analitycs.pageView('/menu/transaksi/' + widget.menu.category_id, {
       'userId': bloc.userId.valueWrapper?.value,
       'title': 'Buka Menu ' + widget.menu.name
     });
-    getData();
-    getSuggestNumbers();
   }
 
   Future<void> _getPackageName() async {
@@ -87,123 +88,149 @@ abstract class SeepaysDetailDenomController extends State<SeepaysDetailDenom>
   }
 
   Future<void> getSuggestNumbers() async {
+    print('=== Seepays Detail Denom getSuggestNumbers() START ===');
+    print('🔍 Package Name: $packageName');
+    print('🔍 Menu Name: ${widget.menu.name}');
+    print('🔍 Menu Kode Produk: ${widget.menu.kodeProduk}');
+    print('🔍 Category ID: ${widget.menu.category_id}');
+    print('🔍 Use API Suggest: $useApiSuggest');
+    print('🔍 API URL: $apiUrl');
+    
     // FITUR SUGGEST HISTORY NOMOR PEMBELI - EKSKLUSIF UNTUK APLIKASI SEEPAYS
     if (packageName != 'com.seepaysbiller.app') {
+      print('❌ Not Seepays, skipping suggest numbers');
       setState(() {
         suggestNumbers = [];
       });
       return;
     }
 
+    print('✅ Seepays detected, proceeding with suggest numbers');
+
     if (!useApiSuggest) {
+      print('📋 Using hardcoded suggestions');
       setState(() {
         suggestNumbers = _hardcodedSuggestionsForMenu(widget.menu.name);
       });
       return;
     }
 
+    print('🌐 Using API suggestions');
+
     try {
       setState(() { loadingSuggest = true; });
 
       // Gunakan kategori ID untuk pulsa jika tersedia
-      String apiEndpoint = '$apiUrl/trx/list?page=0&limit=50';
-      if (widget.menu.category_id != null && widget.menu.category_id.isNotEmpty) {
-        apiEndpoint = '$apiUrl/trx/list?page=0&limit=50&kategori_id=${widget.menu.category_id}';
-      } else if (widget.menu.name.toLowerCase().contains('pulsa')) {
+      String apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=${widget.menu.category_id}&limit=10&skip=0';
+      if (widget.menu.category_id == null || widget.menu.category_id.isEmpty) {
         // Fallback untuk pulsa jika category_id kosong
-        apiEndpoint = '$apiUrl/trx/list?page=0&limit=50&kategori_id=685b71969a3036284f0d8fec';
+        apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=685b71969a3036284f0d8fec&limit=10&skip=0';
+        print('⚠️ Category ID kosong, menggunakan fallback');
       }
       
       print('🌐 Seepays API Endpoint: $apiEndpoint');
+      print('🔍 Category ID: ${widget.menu.category_id}');
       
       final response = await http.get(
         Uri.parse(apiEndpoint),
         headers: { 'Authorization': bloc.token.valueWrapper?.value },
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonBody = json.decode(response.body);
-        final List<dynamic> datas = (jsonBody['data'] ?? []) as List<dynamic>;
+      print('📡 Response Status: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
 
-        // sort terbaru dulu
+      if (response.statusCode == 200) {
+        // Response lastTransaction langsung berupa array
+        final List<dynamic> datas = json.decode(response.body) as List<dynamic>;
+        print('📊 Found ${datas.length} transactions in response');
+
+        if (datas.isEmpty) {
+          print('📭 No transactions found for category: ${widget.menu.category_id}');
+          setState(() { 
+            suggestNumbers = ['Belum pernah transaksi di produk ini']; 
+          });
+          return;
+        }
+
+        // sort terbaru dulu berdasarkan tanggal
         datas.sort((a, b) {
-          final String ac = (a['created_at'] ?? '');
-          final String bc = (b['created_at'] ?? '');
+          final String ac = (a['tanggal'] ?? '');
+          final String bc = (b['tanggal'] ?? '');
           DateTime ad, bd;
           try { ad = DateTime.parse(ac); } catch (_) { ad = DateTime.fromMillisecondsSinceEpoch(0); }
           try { bd = DateTime.parse(bc); } catch (_) { bd = DateTime.fromMillisecondsSinceEpoch(0); }
           return bd.compareTo(ad);
         });
 
-        final Set<String> allowedCodes = listDenom
-            .map((e) => (e.kode_produk ?? '').toString())
-            .where((e) => e.isNotEmpty)
-            .toSet();
-
         final Set<String> uniqueTargets = <String>{};
         for (final dynamic item in datas) {
-          final Map<String, dynamic> prod = (item['produk_id'] ?? {}) as Map<String, dynamic>;
-          final String code = (prod['kode_produk'] ?? '').toString();
-          final String name = (prod['nama'] ?? '').toString();
           final String tujuanItem = (item['tujuan'] ?? '').toString().trim();
+          print('🔍 Processing item: $tujuanItem');
           if (tujuanItem.isEmpty) continue;
 
-          bool matchesMenu = true;
-          if (allowedCodes.isNotEmpty) {
-            matchesMenu = allowedCodes.contains(code);
-          } else {
-            final String menuName = (widget.menu.name ?? '').toLowerCase();
-            final String n = name.toLowerCase();
-            final String c = code.toLowerCase();
-            if (menuName.contains('dana')) {
-              matchesMenu = n.contains('dana') || c.contains('dana');
-            } else if (menuName.contains('ovo')) {
-              matchesMenu = n.contains('ovo') || c.contains('ovo');
-            } else if (menuName.contains('gopay') || menuName.contains('gojek')) {
-              matchesMenu = n.contains('gopay') || n.contains('gojek') || c.contains('gopay');
-            } else if (menuName.contains('shopee')) {
-              matchesMenu = n.contains('shopee') || c.contains('shopee');
-            } else if (menuName.contains('mobile legends') || menuName.contains('ml') || menuName.contains('mlbb')) {
-              matchesMenu = n.contains('mobile') || n.contains('legends') || c.contains('ml');
-            } else if (menuName.contains('free fire') || menuName.contains('ff')) {
-              matchesMenu = n.contains('free') || n.contains('fire') || c.contains('ff');
-            }
-          }
-
-          if (matchesMenu) {
+          // Terima semua format yang valid (HP, PLN ID, dll)
+          if (tujuanItem.length >= 8 && tujuanItem.length <= 20) {
             uniqueTargets.add(tujuanItem);
+            print('✅ Added to suggestions: $tujuanItem');
             if (uniqueTargets.length >= 10) break;
+          } else {
+            print('❌ Skipped (invalid length): $tujuanItem');
           }
         }
 
-        setState(() { suggestNumbers = uniqueTargets.toList(); });
+        setState(() { 
+          suggestNumbers = uniqueTargets.toList(); 
+        });
+        print('✅ Final suggest numbers: $suggestNumbers');
       } else {
-        setState(() { suggestNumbers = []; });
+        print('❌ API failed with status: ${response.statusCode}');
+        setState(() { 
+          suggestNumbers = ['Belum pernah transaksi di produk ini']; 
+        });
       }
-    } catch (_) {
-      setState(() { suggestNumbers = []; });
+    } catch (error) {
+      print('❌ Error dalam getSuggestNumbers: $error');
+      setState(() { 
+        suggestNumbers = ['Belum pernah transaksi di produk ini']; 
+      });
     } finally {
       setState(() { loadingSuggest = false; });
     }
+    
+    print('=== Seepays Detail Denom getSuggestNumbers() END ===');
   }
 
   List<String> _hardcodedSuggestionsForMenu(String menuName) {
+    print('🔍 _hardcodedSuggestionsForMenu called for: $menuName');
     final String name = (menuName ?? '').toLowerCase();
+    print('🔍 Normalized menu name: $name');
+    
     if (name.contains('dana')) {
+      print('✅ Returning Dana suggestions');
       return ['085852076162', '081234567890', '088123456789', '087812345678'];
     } else if (name.contains('ovo')) {
+      print('✅ Returning OVO suggestions');
       return ['081234567890', '081298765432', '082111223344'];
     } else if (name.contains('gopay') || name.contains('gojek')) {
+      print('✅ Returning Gopay suggestions');
       return ['085700112233', '085700223344', '085700334455'];
     } else if (name.contains('shopee')) {
+      print('✅ Returning Shopee suggestions');
       return ['081390001122', '081390002233', '081390003344'];
     } else if (name.contains('mobile legends') || name.contains('ml') || name.contains('mlbb')) {
+      print('✅ Returning MLBB suggestions');
       return ['100012345678', '200012345678', '300012345678'];
     } else if (name.contains('free fire') || name.contains('ff')) {
+      print('✅ Returning Free Fire suggestions');
       return ['1212', '1213', '2'];
     } else if (name.contains('pubg')) {
+      print('✅ Returning PUBG suggestions');
       return ['555001122', '555002233', '555003344'];
+    } else if (name.contains('pln')) {
+      print('✅ Returning PLN suggestions');
+      return ['123456789', '987654321'];
     }
+    print('⚠️ No specific suggestions found, returning default');
     return ['081234567890', '082112223333', '089512345678'];
   }
 } 

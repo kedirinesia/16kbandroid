@@ -217,7 +217,7 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
 
     Future<void> _loadMccDetails(String mccId) async {
     try {
-      final response = await http.get(Uri.parse('$apiUrl/mcc/list'));
+              final response = await http.get(Uri.parse('https://payuni-app.findig.id/api/v1/mcc/list'));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -249,7 +249,7 @@ class _QrisRequestFormPageState extends State<QrisRequestFormPage> {
   Future<void> _loadPendapatanOptions() async {
     try {
       print('[DEBUG] Payuniovo: Loading pendapatan options from API...');
-      final response = await http.get(Uri.parse('https://payuni-app.findig.id/api/v1/qris/kategori-usaha'));
+              final response = await http.get(Uri.parse('https://payuni-app.findig.id/api/v1/qris/kategori-usaha'));
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
