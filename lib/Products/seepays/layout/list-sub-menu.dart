@@ -179,11 +179,86 @@ class _ListSubMenuState extends ListSubMenuController {
                                 : Theme.of(context).primaryColor,
                             backgroundColor: Colors.white,
                             strokeWidth: 3.0,
-                            child: ListView.separated(
-                                padding: EdgeInsets.all(20),
-                                itemCount: listMenu.length,
-                                separatorBuilder: (_, i) => SizedBox(height: 10),
-                                itemBuilder: (ctx, i) {
+                            child: listMenu.isEmpty && showEmptyState
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.inbox_outlined,
+                                          size: 80,
+                                          color: Colors.grey[400],
+                                        ),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          'Produk Masih Kosong',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Belum ada produk tersedia\nuntuk kategori ini',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                        SizedBox(height: 24),
+                                        ElevatedButton.icon(
+                                          onPressed: () async {
+                                            try {
+                                              await getData();
+                                            } catch (e) {
+                                              print('Error during refresh: $e');
+                                            }
+                                          },
+                                          icon: Icon(Icons.refresh),
+                                          label: Text('Coba Lagi'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: packageName == 'com.lariz.mobile'
+                                                ? Theme.of(context).secondaryHeaderColor
+                                                : Theme.of(context).primaryColor,
+                                            foregroundColor: Colors.white,
+                                            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : listMenu.isEmpty && !showEmptyState
+                                    ? Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            SpinKitThreeBounce(
+                                              color: packageName == 'com.lariz.mobile'
+                                                  ? Theme.of(context).secondaryHeaderColor
+                                                  : Theme.of(context).primaryColor,
+                                              size: 35,
+                                            ),
+                                            SizedBox(height: 16),
+                                            Text(
+                                              'Memuat produk...',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                : ListView.separated(
+                                    padding: EdgeInsets.all(20),
+                                    itemCount: listMenu.length,
+                                    separatorBuilder: (_, i) => SizedBox(height: 10),
+                                    itemBuilder: (ctx, i) {
                                   MenuModel menu = listMenu[i];
                                   return InkWell(
                                     onTap: () => onTapMenu(menu),

@@ -27,9 +27,10 @@ abstract class SeepaysDetailDenomPostpaidController extends State<SeepaysDetailD
   void initState() {
     super.initState();
     _getPackageName().then((_) {
-      getData().then((_) {
-        getSuggestNumbers();
-      });
+      // Jalankan getData dan getSuggestNumbers secara parallel untuk optimasi loading
+      getData();
+      // Background suggest numbers tanpa memblokir loading halaman
+      getSuggestNumbers();
     });
     analitycs.pageView('/menu/transaksi/' + widget.menu.kodeProduk, {
       'userId': bloc.userId.valueWrapper?.value,
@@ -87,47 +88,33 @@ abstract class SeepaysDetailDenomPostpaidController extends State<SeepaysDetailD
         return;
       }
       
+      // Single API call untuk optimasi kecepatan - hilangkan multiple testing
       String apiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=$finalCategoryId&limit=10&skip=0';
       print('✅ Using category_id for API call: $finalCategoryId');
-      
       print('🌐 Seepays Postpaid API Endpoint: $apiEndpoint');
       
-      // Debug: Coba juga test dengan category ID yang berbeda jika yang pertama kosong
-      List<String> testCategoryIds = [
-        finalCategoryId,
-        '5eb704e8c78b531bd8ab3e0c', // Category ID lama
-        '5eb704e9c78b531160ab4160', // PLN Token category ID dari response
-      ];
+      final response = await http.get(
+        Uri.parse(apiEndpoint),
+        headers: {
+          'Authorization': bloc.token.valueWrapper?.value,
+        },
+      );
       
-      bool foundData = false;
-      
-      for (String testCategoryId in testCategoryIds) {
-        if (foundData) break;
-        
-        String testApiEndpoint = '$apiUrl/trx/lastTransaction?kategori_id=$testCategoryId&limit=10&skip=0';
-        print('🧪 Testing API Endpoint: $testApiEndpoint');
-        
-        final response = await http.get(
-          Uri.parse(testApiEndpoint),
-          headers: {
-            'Authorization': bloc.token.valueWrapper?.value,
-          },
-        );
-        
-        print('📡 Response Status: ${response.statusCode}');
-        print('📡 Response Body: ${response.body}');
+      print('📡 Response Status: ${response.statusCode}');
+      print('📡 Response Body: ${response.body}');
 
-        if (response.statusCode == 200) {
-          // Response lastTransaction langsung berupa array
-          final List<dynamic> datas = json.decode(response.body) as List<dynamic>;
-          print('📊 Found ${datas.length} transactions in response for category: $testCategoryId');
+      if (response.statusCode == 200) {
+        // Response lastTransaction langsung berupa array
+        final List<dynamic> datas = json.decode(response.body) as List<dynamic>;
+        print('📊 Found ${datas.length} transactions in response');
 
-          if (datas.isEmpty) {
-            print('📭 No transactions found for category: $testCategoryId');
-            continue; // Try next category ID
-          }
-          
-          foundData = true;
+        if (datas.isEmpty) {
+          print('📭 No transactions found for category: $finalCategoryId');
+          setState(() { 
+            suggestNumbers = ['Belum pernah transaksi di produk ini']; 
+          });
+          return;
+        }
 
         // sort terbaru dulu berdasarkan tanggal
         datas.sort((a, b) {
@@ -155,19 +142,12 @@ abstract class SeepaysDetailDenomPostpaidController extends State<SeepaysDetailD
           }
         }
 
-          setState(() { 
-            suggestNumbers = uniqueTargets.toList(); 
-          });
-          print('✅ Final suggest numbers from category $testCategoryId: $suggestNumbers');
-          break; // Exit the loop since we found data
-        } else {
-          print('❌ API failed with status: ${response.statusCode} for category: $testCategoryId');
-        }
-      }
-      
-      // If no data found in any category
-      if (!foundData) {
-        print('❌ No transaction data found in any tested category IDs');
+        setState(() { 
+          suggestNumbers = uniqueTargets.toList(); 
+        });
+        print('✅ Final suggest numbers: $suggestNumbers');
+      } else {
+        print('❌ API failed with status: ${response.statusCode}');
         setState(() { 
           suggestNumbers = ['Belum pernah transaksi di produk ini']; 
         });

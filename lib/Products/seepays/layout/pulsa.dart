@@ -870,7 +870,7 @@ class _PulsaState extends State<Pulsa> with TickerProviderStateMixin {
       {
         'name': 'smartfren',
         'prefix': '0881, 0882, 0883, 0884, 0885, 0886, 0887, 0888, 0889',
-        'url': 'https://www.logo.wine/a/logo/Smartfren/Smartfren-Logo.wine.svg',
+        'url': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRA2FDMzua1kXlHxQerodC_bowQIhFjGpm1bQ&s',
       },
       {
         'name': 'axis',

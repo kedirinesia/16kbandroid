@@ -165,6 +165,13 @@ class _MorePageState extends State<MorePage> {
               MaterialPageRoute(builder: (_) => DynamicPrepaidDenom(menu)));
         } else {
           print('➡️ Menu menuju ke: ListSubMenu (category_id kosong/null)');
+          print('🔍 MorePage Debug: Mengirim menu ke ListSubMenu:');
+          print('   📋 Menu ID: ${menu.id}');
+          print('   📋 Menu Name: ${menu.name}');
+          print('   📋 Menu Type: ${menu.type}');
+          print('   📋 Menu Jenis: ${menu.jenis}');
+          print('   📋 Menu Category ID: ${menu.category_id}');
+          print('   📋 Menu Kode Produk: ${menu.kodeProduk}');
           Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => ListSubMenu(menu)));
         }

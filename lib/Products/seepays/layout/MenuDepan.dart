@@ -13,6 +13,9 @@ import '../../../config.dart';
 import '../../seepays/layout/morepage.dart';
 
 import 'package:mobile/screen/detail-denom-postpaid/detail-postpaid.dart';
+
+// Import untuk external access
+// import 'package:mobile/Products/seepays/layout/list-sub-menu-controller.dart';
 import 'package:mobile/screen/detail-denom/detail-denom.dart';
 import 'package:mobile/screen/dynamic-prepaid/dynamic-denom.dart';
  
@@ -64,15 +67,35 @@ class _MenuDepanState extends State<MenuDepan> {
   static List<MenuModel> _cachedMenuData = [];
   static bool _isDataLoaded = false;
   
+  // Method untuk clear cache dan force reload
+  static void clearCache() {
+    _cachedMenuData.clear();
+    _isDataLoaded = false;
+    _cachedPrabayarMenu.clear();
+    _cachedPascabayarMenu.clear();
+    _cachedPrabayarMoreMenu.clear();
+    _cachedPascabayarMoreMenu.clear();
+    _cachedMoreMenu.clear();
+    _cachedSubmenus.clear();
+    print('🧹 MenuDepan: Cache cleared, akan fetch data fresh dari server');
+  }
+  
   // Cache untuk menyimpan hasil pemisahan kategori
   static List<MenuModel> _cachedPrabayarMenu = [];
   static List<MenuModel> _cachedPascabayarMenu = [];
   static List<MenuModel> _cachedPrabayarMoreMenu = [];
   static List<MenuModel> _cachedPascabayarMoreMenu = [];
   static List<MenuModel> _cachedMoreMenu = [];
+  
+  // Cache untuk submenu yang sudah di-preload
+  static Map<String, List<MenuModel>> _cachedSubmenus = {};
 
   Future<void> getMenu() async {
     try {
+      // TEMPORARY: Force refresh untuk debug data mismatch issue
+      // Comment baris ini setelah masalah resolved
+      // clearCache();
+      
       // Gunakan cache jika sudah ada data
       if (_isDataLoaded && _cachedMenuData.isNotEmpty) {
         print('📊 Using cached menu data: ${_cachedMenuData.length} items');
@@ -102,6 +125,23 @@ class _MenuDepanState extends State<MenuDepan> {
       if (response.statusCode == 200) {
         final jsonBody = json.decode(response.body);
         final List data = jsonBody['data'] ?? [];
+        
+        // Debug: Log response API untuk bandingkan dengan yang Anda berikan
+        print('🌐 MenuDepan API Response Status: ${response.statusCode}');
+        print('🌐 MenuDepan API Response Length: ${data.length} items');
+        
+        // Debug: Log beberapa menu pertama untuk komparasi
+        for (int i = 0; i < (data.length > 5 ? 5 : data.length); i++) {
+          var item = data[i];
+          print('📋 API Menu $i: ${item['name']} | ID: ${item['_id']} | Type: ${item['type']} | Category: ${item['category_id']}');
+        }
+        
+        // Cari khusus menu TELKOM
+        var telkomMenu = data.firstWhere((item) => item['name']?.toString()?.toLowerCase()?.contains('telkom') == true, orElse: () => null);
+        if (telkomMenu != null) {
+          print('🎯 TELKOM Menu dari API: ID=${telkomMenu['_id']}, Name=${telkomMenu['name']}, Type=${telkomMenu['type']}');
+        }
+        
         List<MenuModel> listMenu =
             data.map((e) => MenuModel.fromJson(e)).toList();
 
@@ -122,6 +162,9 @@ class _MenuDepanState extends State<MenuDepan> {
         _cachedPrabayarMoreMenu = List<MenuModel>.from(_prabayarMoreMenu);
         _cachedPascabayarMoreMenu = List<MenuModel>.from(_pascabayarMoreMenu);
         _cachedMoreMenu = List<MenuModel>.from(_moreMenu);
+        
+        // Preload submenu untuk menu yang sering diakses
+        _preloadSubmenus(listMenu);
       } else {
         _prabayarMenu = [];
         _pascabayarMenu = [];
@@ -323,6 +366,13 @@ class _MenuDepanState extends State<MenuDepan> {
               MaterialPageRoute(builder: (_) => DynamicPrepaidDenom(menu)));
         } else {
           print('➡️ Menu menuju ke: ListSubMenu (category_id kosong/null)');
+          print('🔍 MenuDepan Debug: Mengirim menu ke ListSubMenu:');
+          print('   📋 Menu ID: ${menu.id}');
+          print('   📋 Menu Name: ${menu.name}');
+          print('   📋 Menu Type: ${menu.type}');
+          print('   📋 Menu Jenis: ${menu.jenis}');
+          print('   📋 Menu Category ID: ${menu.category_id}');
+          print('   📋 Menu Kode Produk: ${menu.kodeProduk}');
           return Navigator.of(context)
               .push(MaterialPageRoute(builder: (_) => ListSubMenu(menu)));
         }
@@ -528,5 +578,70 @@ class _MenuDepanState extends State<MenuDepan> {
               ),
             ),
           );
+  }
+  
+  // Method untuk preload submenu yang sering diakses
+  Future<void> _preloadSubmenus(List<MenuModel> menuList) async {
+    print('🚀 Starting submenu preloading...');
+    
+    // Filter menu yang tidak punya category_id atau kodeProduk (biasanya parent menu)
+    List<MenuModel> parentMenus = menuList.where((menu) => 
+      (menu.category_id == null || menu.category_id.isEmpty) &&
+      (menu.kodeProduk == null || menu.kodeProduk.isEmpty)
+    ).toList();
+    
+    print('📋 Found ${parentMenus.length} parent menus to preload');
+    
+    for (MenuModel parentMenu in parentMenus) {
+      // Skip jika sudah di-cache
+      if (_cachedSubmenus.containsKey(parentMenu.id)) {
+        print('✅ Submenu for ${parentMenu.name} already cached');
+        continue;
+      }
+      
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        var token = prefs.getString('token');
+        
+        String apiEndpoint = 'https://app.payuni.co.id/api/v1/menu/${parentMenu.id}/child';
+        print('🌐 Preloading submenu: $apiEndpoint');
+        
+        final response = await http.get(
+          Uri.parse(apiEndpoint),
+          headers: {
+            'Authorization': token,
+            'Accept': 'application/json',
+          },
+        );
+        
+        if (response.statusCode == 200) {
+          final jsonBody = json.decode(response.body);
+          final List data = jsonBody['data'] ?? [];
+          List<MenuModel> submenuList = data.map((e) => MenuModel.fromJson(e)).toList();
+          
+          // Cache submenu
+          _cachedSubmenus[parentMenu.id] = submenuList;
+          // Juga simpan di global cache jika ada
+          // _globalSubmenuCache[parentMenu.id] = submenuList;
+          print('✅ Preloaded ${submenuList.length} submenus for ${parentMenu.name}');
+          
+          // Log submenu details
+          for (MenuModel submenu in submenuList) {
+            print('   📋 Cached submenu: ${submenu.name} | category_id: "${submenu.category_id}" | kodeProduk: "${submenu.kodeProduk}"');
+          }
+        } else {
+          print('❌ Failed to preload submenu for ${parentMenu.name}: ${response.statusCode}');
+        }
+      } catch (e) {
+        print('❌ Error preloading submenu for ${parentMenu.name}: $e');
+      }
+    }
+    
+    print('🎯 Submenu preloading completed');
+  }
+  
+  // Method untuk mendapatkan cached submenu
+  static List<MenuModel> getCachedSubmenu(String menuId) {
+    return _cachedSubmenus[menuId] ?? [];
   }
 }
